@@ -30,7 +30,17 @@ npx serve .
 
 ## 部署
 
-本项目已部署至 Cloudflare Workers 静态资源。
+本项目已部署至 Cloudflare Workers 静态资源：
+
+- **正式域名**：https://family-doctor.letsgo.cc.cd
+- Workers 默认域名：https://family-doctor-h5.2412.workers.dev
+
+本地重新部署：
+
+```bash
+npm install
+npx wrangler deploy
+```
 
 ## 免责声明
 

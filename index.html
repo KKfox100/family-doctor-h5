@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0369a1">
+    <meta name="description" content="家庭医生助手 - 基于循证医学的全科健康管理工具">
+    <title>家庭医生助手 · 循证医学与全科健康管理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: {
+                clinical: { 50:'#f0f9ff',100:'#e0f2fe',200:'#bae6fd',300:'#7dd3fc',400:'#38bdf8',500:'#0ea5e9',600:'#0284c7',700:'#0369a1',800:'#075985',900:'#0c4a6e' },
+                tealmed: { 50:'#f0fdf4',100:'#dcfce7',200:'#bbf7d0',300:'#86efac',400:'#4ade80',500:'#10b981',600:'#059669',700:'#047857',800:'#065f46' },
+                medicred: { 50:'#fef2f2',100:'#fee2e2',200:'#fecaca',300:'#fca5a5',400:'#f87171',500:'#ef4444',600:'#dc2626',700:'#b91c1c' },
+                ambermed: { 50:'#fffbeb',100:'#fef3c7',200:'#fde68a',400:'#fbbf24',500:'#f59e0b',600:'#d97706',700:'#b45309' }
+            }}}
+        }
+    </script>
+    <style>
+        *{ -webkit-tap-highlight-color: transparent; }
+        body{ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; background-color:#f1f5f9; color:#1e293b; overscroll-behavior:none; }
+        .hide-scrollbar::-webkit-scrollbar{ display:none; }
+        .hide-scrollbar{ -ms-overflow-style:none; scrollbar-width:none; }
+        .animate-slide-up{ animation:slideUp .25s ease-out; }
+        .animate-fade-in{ animation:fadeIn .2s ease-out; }
+        @keyframes slideUp{ from{transform:translateY(100%);opacity:0;} to{transform:translateY(0);opacity:1;} }
+        @keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
+        .line-clamp-2{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen pb-24 select-none">
+
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 shadow-sm">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-clinical-600 to-tealmed-600 flex items-center justify-center text-white shadow-md shadow-clinical-500/20">
+                    <i class="fa-solid fa-user-doctor text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-slate-800 text-base leading-tight">家庭医生助手</h1>
+                    <p class="text-[10px] text-clinical-600 font-medium">默沙东诊疗手册 / 强生 / 辉瑞 循证医学标准</p>
+                </div>
+            </div>
+            <button onclick="toggleModal('scienceModal')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-full flex items-center space-x-1 transition active:scale-95">
+                <i class="fa-solid fa-shield-halved text-clinical-600 text-[10px]"></i><span>循证准则</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="bg-gradient-to-r from-clinical-800 to-slate-800 text-white text-xs px-4 py-1.5 shadow-inner">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-square-check text-tealmed-500 shrink-0"></i>
+                <p class="text-[11px] text-slate-200 leading-tight">全科常见病指南 · 严格消除无据偏方与陈旧误区</p>
+            </div>
+            <span class="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-tealmed-100 shrink-0">权威临床支持</span>
+        </div>
+    </div>
+
+    <main class="max-w-md mx-auto px-4 pt-3 pb-6">
+
+        <!-- PAGE 1: DISEASE LIBRARY -->
+        <section id="view-knowledge" class="view-panel space-y-3">
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                <input type="text" id="searchInput" oninput="filterKnowledge()" placeholder="搜索疾病、症状或药物 (如: 鼻炎、糖尿病、痛风)"
+                    class="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:border-clinical-500 focus:ring-1 focus:ring-clinical-500 transition">
+            </div>
+            <div class="flex space-x-2 overflow-x-auto hide-scrollbar pb-1 text-xs">
+                <button onclick="filterCategory('all', this)" class="cat-btn bg-clinical-600 text-white px-3 py-1.5 rounded-lg whitespace-nowrap font-medium shadow-sm transition active:scale-95">全部疾病</button>
+                <button onclick="filterCategory('resp', this)" class="cat-btn bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg whitespace-nowrap transition active:scale-95">呼吸系统</button>
+                <button onclick="filterCategory('digest', this)" class="cat-btn bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg whitespace-nowrap transition active:scale-95">消化系统</button>
+                <button onclick="filterCategory('cardio', this)" class="cat-btn bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg whitespace-nowrap transition active:scale-95">心血管慢病</button>
+                <button onclick="filterCategory('endo', this)" class="cat-btn bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg whitespace-nowrap transition active:scale-95">内分泌/代谢</button>
+                <button onclick="filterCategory('skin', this)" class="cat-btn bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg whitespace-nowrap transition active:scale-95">皮肤科</button>
+                <button onclick="filterCategory('neuro', this)" class="cat-btn bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg whitespace-nowrap transition active:scale-95">神经/心理</button>
+                <button onclick="filterCategory('peds', this)" class="cat-btn bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg whitespace-nowrap transition active:scale-95">儿科常见</button>
+                <button onclick="filterCategory('reproductive', this)" class="cat-btn bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg whitespace-nowrap transition active:scale-95">妇科/男科</button>
+            </div>
+            <div class="bg-gradient-to-br from-clinical-600 to-tealmed-600 text-white rounded-2xl p-4 shadow-lg shadow-clinical-500/15 relative overflow-hidden flex items-center justify-between">
+                <div class="relative z-10 pr-2">
+                    <h3 class="text-sm font-bold">突发身体不适？在线症状预估</h3>
+                    <p class="text-[11px] text-clinical-100 mt-0.5">快速筛查红旗危重信号，获取就医分诊建议</p>
+                </div>
+                <button onclick="switchTab('triage')" class="bg-white text-clinical-700 text-xs font-bold px-3 py-2 rounded-xl shrink-0 shadow-sm hover:bg-slate-50 transition active:scale-95">去评估 <i class="fa-solid fa-arrow-right ml-1"></i></button>
+            </div>
+            <div id="diseaseList" class="space-y-3"></div>
+        </section>
+
+        <!-- PAGE 2: TRIAGE -->
+        <section id="view-triage" class="view-panel hidden space-y-4">
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
+                <div class="flex items-center space-x-2 border-b border-slate-100 pb-3">
+                    <div class="w-8 h-8 rounded-lg bg-clinical-50 text-clinical-600 flex items-center justify-center font-bold"><i class="fa-solid fa-stethoscope"></i></div>
+                    <div>
+                        <h2 class="font-bold text-sm text-slate-800">智能红旗症状排查与分诊</h2>
+                        <p class="text-[11px] text-slate-500">基于临床路径筛查是否需要紧急救治</p>
+                    </div>
+                </div>
+                <div id="triageWizard" class="space-y-4">
+                    <div id="triageStep1" class="space-y-3">
+                        <label class="block text-xs font-semibold text-slate-700">步骤 1/3 · 请选择当前最突出的主要症状：</label>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <button onclick="selectTriageSymptom('fever','急性发热/寒战')" class="symptom-opt border border-slate-200 p-2.5 rounded-xl text-left hover:border-clinical-500 hover:bg-clinical-50/50 transition active:scale-95"><span class="font-medium text-slate-800 block">急性发热 / 寒战</span><span class="text-[10px] text-slate-400">体温超过37.3</span></button>
+                            <button onclick="selectTriageSymptom('chest','胸痛/胸闷')" class="symptom-opt border border-slate-200 p-2.5 rounded-xl text-left hover:border-clinical-500 hover:bg-clinical-50/50 transition active:scale-95"><span class="font-medium text-slate-800 block">胸痛 / 胸闷</span><span class="text-[10px] text-slate-400">心血管相关</span></button>
+                            <button onclick="selectTriageSymptom('dyspnea','呼吸困难/喘息')" class="symptom-opt border border-slate-200 p-2.5 rounded-xl text-left hover:border-clinical-500 hover:bg-clinical-50/50 transition active:scale-95"><span class="font-medium text-slate-800 block">呼吸困难 / 喘息</span><span class="text-[10px] text-slate-400">通气障碍</span></button>
+                            <button onclick="selectTriageSymptom('neuro','头痛/麻木无力')" class="symptom-opt border border-slate-200 p-2.5 rounded-xl text-left hover:border-clinical-500 hover:bg-clinical-50/50 transition active:scale-95"><span class="font-medium text-slate-800 block">头痛 / 麻木</span><span class="text-[10px] text-slate-400">神经系统</span></button>
+                            <button onclick="selectTriageSymptom('abpain','剧烈腹痛/呕吐')" class="symptom-opt border border-slate-200 p-2.5 rounded-xl text-left hover:border-clinical-500 hover:bg-clinical-50/50 transition active:scale-95"><span class="font-medium text-slate-800 block">剧烈腹痛 / 呕吐</span><span class="text-[10px] text-slate-400">急腹症排查</span></button>
+                            <button onclick="selectTriageSymptom('general','其他常见不适')" class="symptom-opt border border-slate-200 p-2.5 rounded-xl text-left hover:border-clinical-500 hover:bg-clinical-50/50 transition active:scale-95"><span class="font-medium text-slate-800 block">其他常见不适</span><span class="text-[10px] text-slate-400">慢性病/皮疹</span></button>
+                        </div>
+                    </div>
+                    <div id="triageStep2" class="hidden space-y-3">
+                        <label class="block text-xs font-semibold text-slate-700">步骤 2/3 · 症状持续多久了？</label>
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <button onclick="selectDuration('acute',this)" class="dur-opt border border-slate-200 p-2.5 rounded-xl text-center hover:border-clinical-500 transition active:scale-95"><span class="font-medium text-slate-800 block">突发</span><span class="text-[10px] text-slate-400">数小时内</span></button>
+                            <button onclick="selectDuration('subacute',this)" class="dur-opt border border-slate-200 p-2.5 rounded-xl text-center hover:border-clinical-500 transition active:scale-95"><span class="font-medium text-slate-800 block">近期</span><span class="text-[10px] text-slate-400">1-3天</span></button>
+                            <button onclick="selectDuration('chronic',this)" class="dur-opt border border-slate-200 p-2.5 rounded-xl text-center hover:border-clinical-500 transition active:scale-95"><span class="font-medium text-slate-800 block">持续</span><span class="text-[10px] text-slate-400">>3天</span></button>
+                        </div>
+                    </div>
+                    <div id="triageStep3" class="hidden space-y-3">
+                        <label class="block text-xs font-semibold text-slate-700">步骤 3/3 · 是否伴随以下"红旗危重信号"？（可多选）</label>
+                        <div class="space-y-2 text-xs">
+                            <label class="flex items-start p-2.5 bg-rose-50 border border-rose-100 rounded-xl text-rose-900 cursor-pointer hover:bg-rose-100/50 transition"><input type="checkbox" class="redflag-chk rounded border-rose-300 text-rose-600 focus:ring-rose-500 mt-0.5 mr-2.5 shrink-0"><span>突然出现单侧肢体无力、口角歪斜、说话不清或视物模糊（中风征象）</span></label>
+                            <label class="flex items-start p-2.5 bg-rose-50 border border-rose-100 rounded-xl text-rose-900 cursor-pointer hover:bg-rose-100/50 transition"><input type="checkbox" class="redflag-chk rounded border-rose-300 text-rose-600 focus:ring-rose-500 mt-0.5 mr-2.5 shrink-0"><span>剧烈胸痛且向左臂、肩背或下颌放射，伴大汗淋漓（心梗征象）</span></label>
+                            <label class="flex items-start p-2.5 bg-rose-50 border border-rose-100 rounded-xl text-rose-900 cursor-pointer hover:bg-rose-100/50 transition"><input type="checkbox" class="redflag-chk rounded border-rose-300 text-rose-600 focus:ring-rose-500 mt-0.5 mr-2.5 shrink-0"><span>静息状态下严重呼吸困难、口唇紫绀或极度喘息</span></label>
+                            <label class="flex items-start p-2.5 bg-rose-50 border border-rose-100 rounded-xl text-rose-900 cursor-pointer hover:bg-rose-100/50 transition"><input type="checkbox" class="redflag-chk rounded border-rose-300 text-rose-600 focus:ring-rose-500 mt-0.5 mr-2.5 shrink-0"><span>意识模糊、嗜睡、精神极度萎靡或抽搐发作</span></label>
+                            <label class="flex items-start p-2.5 bg-rose-50 border border-rose-100 rounded-xl text-rose-900 cursor-pointer hover:bg-rose-100/50 transition"><input type="checkbox" class="redflag-chk rounded border-rose-300 text-rose-600 focus:ring-rose-500 mt-0.5 mr-2.5 shrink-0"><span>持续高热(>39)超过3天不退，或退热后再次高热</span></label>
+                            <label class="flex items-start p-2.5 bg-rose-50 border border-rose-100 rounded-xl text-rose-900 cursor-pointer hover:bg-rose-100/50 transition"><input type="checkbox" class="redflag-chk rounded border-rose-300 text-rose-600 focus:ring-rose-500 mt-0.5 mr-2.5 shrink-0"><span>剧烈持续腹痛伴板状腹，呕吐物呈咖啡色或便血</span></label>
+                        </div>
+                        <div class="flex space-x-2 pt-2">
+                            <button onclick="resetTriage()" class="flex-1 bg-slate-100 text-slate-600 text-xs py-2.5 rounded-xl font-medium transition active:scale-95">重新开始</button>
+                            <button onclick="evaluateTriage()" class="flex-[2] bg-clinical-600 text-white text-xs font-bold py-2.5 rounded-xl shadow-sm hover:bg-clinical-700 transition active:scale-95">提交分诊评估 <i class="fa-solid fa-arrow-right ml-1"></i></button>
+                        </div>
+                    </div>
+                    <div id="triageResult" class="hidden space-y-3">
+                        <div id="resultBanner" class="p-3.5 rounded-xl border text-xs space-y-1"></div>
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1.5">
+                            <h4 class="font-bold text-slate-800 flex items-center"><i class="fa-solid fa-clipboard-list text-clinical-500 mr-1.5"></i>就诊导诊摘要</h4>
+                            <p class="text-slate-400 text-[10px]">可截图出示给接诊医生参考</p>
+                            <p id="triageSummary" class="text-slate-600 text-[11px] leading-relaxed bg-white p-2.5 rounded border border-slate-100"></p>
+                        </div>
+                        <button onclick="resetTriage()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs py-2.5 rounded-xl transition font-medium active:scale-95">重新评估</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAGE 3: MYTHS -->
+        <section id="view-myths" class="view-panel hidden space-y-4">
+            <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl text-amber-900 text-xs space-y-1">
+                <div class="font-bold text-sm flex items-center text-amber-800"><i class="fa-solid fa-lightbulb text-amber-600 mr-2"></i> 辟谣宣言：坚持科学严谨态度</div>
+                <p class="leading-relaxed opacity-90">传统观念与民间偏方大多未经过严谨的双盲随机对照临床试验(RCT)验证。本专区整理了家庭高频误区与现代循证医学的正确事实，知识来源参考默沙东诊疗手册、WHO、UpToDate及辉瑞/强生临床指南。</p>
+            </div>
+            <div id="mythsList" class="space-y-3"></div>
+        </section>
+
+        <!-- PAGE 4: HEALTH PROFILE -->
+        <section id="view-profile" class="view-panel hidden space-y-4">
+            <div class="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex items-center space-x-1.5"><i class="fa-solid fa-users text-clinical-600 text-sm"></i><span class="text-xs font-bold text-slate-700">档案成员：</span></div>
+                <div class="flex space-x-1" id="memberButtons">
+                    <button onclick="switchMember('Self', this)" class="member-btn text-xs px-2.5 py-1 rounded-lg bg-clinical-600 text-white font-medium transition active:scale-95">本人</button>
+                    <button onclick="switchMember('Senior', this)" class="member-btn text-xs px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 transition active:scale-95">长辈</button>
+                    <button onclick="switchMember('Child', this)" class="member-btn text-xs px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 transition active:scale-95">孩子</button>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold text-slate-800 flex items-center"><i class="fa-solid fa-chart-line text-clinical-500 mr-1.5"></i><span id="currentMemberName">本人</span> 的体征动态趋势</h3>
+                    <button onclick="toggleModal('addVitalModal')" class="text-xs bg-clinical-50 text-clinical-600 px-2.5 py-1 rounded-lg font-medium hover:bg-clinical-100 transition active:scale-95"><i class="fa-solid fa-plus text-[10px] mr-0.5"></i>记录</button>
+                </div>
+                <div class="h-48 w-full relative"><canvas id="vitalsChart"></canvas></div>
+                <div id="vitalsStats" class="grid grid-cols-3 gap-2 pt-1"></div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                <h3 class="text-xs font-bold text-slate-800 flex items-center"><i class="fa-solid fa-pills text-tealmed-600 mr-1.5"></i> 循证用药记录与剂量提示</h3>
+                <div id="medList" class="space-y-2 text-xs"></div>
+            </div>
+        </section>
+
+        <!-- PAGE 5: FIRST AID & MEDICATION -->
+        <section id="view-aid" class="view-panel hidden space-y-4">
+            <div class="flex space-x-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+                <button onclick="switchAidTab('firstaid', this)" class="aid-tab flex-1 text-xs font-bold py-2 rounded-lg bg-clinical-600 text-white transition active:scale-95"><i class="fa-solid fa-kit-medical mr-1"></i>急救指南</button>
+                <button onclick="switchAidTab('medguide', this)" class="aid-tab flex-1 text-xs font-bold py-2 rounded-lg text-slate-500 transition active:scale-95"><i class="fa-solid fa-prescription-bottle-medical mr-1"></i>常用药指南</button>
+                <button onclick="switchAidTab('dosage', this)" class="aid-tab flex-1 text-xs font-bold py-2 rounded-lg text-slate-500 transition active:scale-95"><i class="fa-solid fa-calculator mr-1"></i>剂量计算</button>
+            </div>
+            <div id="aidTab-firstaid" class="space-y-3">
+                <div class="bg-rose-50 border border-rose-200 p-3 rounded-2xl text-rose-900 text-xs flex items-center space-x-2"><i class="fa-solid fa-triangle-exclamation text-rose-600"></i><p class="font-medium">急救知识用于紧急时刻参考，遇到危重情况请立即拨打 <span class="font-bold text-rose-700">120</span></p></div>
+                <div id="firstAidList" class="space-y-3"></div>
+            </div>
+            <div id="aidTab-medguide" class="hidden space-y-3">
+                <div class="bg-clinical-50 border border-clinical-200 p-3 rounded-2xl text-clinical-800 text-xs flex items-center space-x-2"><i class="fa-solid fa-circle-info text-clinical-600"></i><p>以下药物按<strong>通用名</strong>分类整理，所有用药请遵医嘱并阅读药品说明书</p></div>
+                <div id="medGuideList" class="space-y-3"></div>
+            </div>
+            <div id="aidTab-dosage" class="hidden space-y-3">
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex items-center space-x-2 border-b border-slate-100 pb-3">
+                        <div class="w-8 h-8 rounded-lg bg-tealmed-50 text-tealmed-600 flex items-center justify-center"><i class="fa-solid fa-calculator"></i></div>
+                        <div><h3 class="font-bold text-sm text-slate-800">儿童退热药剂量计算器</h3><p class="text-[11px] text-slate-500">基于体重计算对乙酰氨基酚/布洛芬剂量</p></div>
+                    </div>
+                    <div class="space-y-3">
+                        <div><label class="block text-xs text-slate-600 mb-1">儿童体重 (kg)</label><input type="number" id="childWeight" step="0.5" placeholder="如: 15" class="w-full p-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-clinical-500"></div>
+                        <div><label class="block text-xs text-slate-600 mb-1">选择药物</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="selectDrug('acet', this)" class="drug-opt border border-slate-200 p-2.5 rounded-xl text-center text-xs hover:border-clinical-500 transition active:scale-95"><span class="font-medium text-slate-800 block">对乙酰氨基酚</span><span class="text-[10px] text-slate-400">混悬液 32mg/ml</span></button>
+                                <button onclick="selectDrug('ibup', this)" class="drug-opt border border-slate-200 p-2.5 rounded-xl text-center text-xs hover:border-clinical-500 transition active:scale-95"><span class="font-medium text-slate-800 block">布洛芬</span><span class="text-[10px] text-slate-400">混悬液 20mg/ml</span></button>
+                            </div>
+                        </div>
+                        <button onclick="calcDosage()" class="w-full bg-clinical-600 text-white font-bold text-xs py-2.5 rounded-xl shadow-sm hover:bg-clinical-700 transition active:scale-95">计算推荐剂量</button>
+                        <div id="dosageResult" class="hidden bg-tealmed-50 border border-tealmed-200 p-3 rounded-xl space-y-2"></div>
+                    </div>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 p-3 rounded-2xl text-amber-800 text-[11px] leading-relaxed space-y-1">
+                    <p class="font-bold flex items-center"><i class="fa-solid fa-exclamation-circle mr-1"></i> 重要提示</p>
+                    <ul class="list-disc pl-4 space-y-0.5"><li>对乙酰氨基酚：每次 10-15mg/kg，每 4-6 小时一次，每日不超过 5 次</li><li>布洛芬：每次 5-10mg/kg，每 6-8 小时一次，每日不超过 4 次</li><li>两次用药需间隔足够时间，不可两种退热药交替混用</li><li>3 个月以下婴儿发热须立即就医，不建议自行用药</li></ul>
+                </div>
+            </div>
+        </section>
+        <!-- PAGE 6: ONLINE QUERY -->
+        <section id="view-online" class="view-panel hidden space-y-4">
+            <div class="bg-gradient-to-br from-clinical-700 to-slate-800 text-white rounded-2xl p-4 shadow-lg space-y-1">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-globe text-tealmed-400 text-lg"></i>
+                    <h2 class="font-bold text-sm">在线查询权威医学来源</h2>
+                </div>
+                <p class="text-[11px] text-clinical-100 leading-relaxed">本地知识库未涵盖的医学问题，可在此输入关键词，一键跳转至国际权威循证医学网站检索。所有来源均为国际认可的医学知识库，不含任何偏方内容。</p>
+            </div>
+
+            <!-- Search Input -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                <label class="block text-xs font-semibold text-slate-700 flex items-center"><i class="fa-solid fa-magnifying-glass text-clinical-600 mr-1.5"></i>输入要查询的疾病 / 症状 / 药物名称</label>
+                <div class="flex space-x-2">
+                    <input type="text" id="onlineQueryInput" onkeydown="if(event.key==='Enter')searchOnline('msd')" placeholder="如：甲状腺炎、HPV疫苗、贫血调理"
+                        class="flex-1 px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-clinical-500 focus:ring-1 focus:ring-clinical-500 transition">
+                    <button onclick="searchOnline('msd')" class="bg-clinical-600 text-white text-xs font-bold px-4 rounded-xl shrink-0 shadow-sm hover:bg-clinical-700 transition active:scale-95">查询</button>
+                </div>
+                <p class="text-[10px] text-slate-400">回车默认在默沙东诊疗手册中搜索，也可点击下方任一来源</p>
+
+                <!-- Suggested Topics -->
+                <div class="space-y-1.5">
+                    <p class="text-[10px] font-bold text-slate-500">热门查询：</p>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button onclick="setOnlineQuery('甲状腺炎')" class="text-[10px] bg-clinical-50 text-clinical-700 border border-clinical-100 px-2 py-1 rounded-lg hover:bg-clinical-100 transition active:scale-95">甲状腺炎</button>
+                        <button onclick="setOnlineQuery('HPV疫苗')" class="text-[10px] bg-clinical-50 text-clinical-700 border border-clinical-100 px-2 py-1 rounded-lg hover:bg-clinical-100 transition active:scale-95">HPV疫苗</button>
+                        <button onclick="setOnlineQuery('贫血')" class="text-[10px] bg-clinical-50 text-clinical-700 border border-clinical-100 px-2 py-1 rounded-lg hover:bg-clinical-100 transition active:scale-95">贫血</button>
+                        <button onclick="setOnlineQuery('肾结石')" class="text-[10px] bg-clinical-50 text-clinical-700 border border-clinical-100 px-2 py-1 rounded-lg hover:bg-clinical-100 transition active:scale-95">肾结石</button>
+                        <button onclick="setOnlineQuery('幽门螺杆菌')" class="text-[10px] bg-clinical-50 text-clinical-700 border border-clinical-100 px-2 py-1 rounded-lg hover:bg-clinical-100 transition active:scale-95">幽门螺杆菌</button>
+                        <button onclick="setOnlineQuery('体检报告解读')" class="text-[10px] bg-clinical-50 text-clinical-700 border border-clinical-100 px-2 py-1 rounded-lg hover:bg-clinical-100 transition active:scale-95">体检报告解读</button>
+                        <button onclick="setOnlineQuery('抑郁')" class="text-[10px] bg-clinical-50 text-clinical-700 border border-clinical-100 px-2 py-1 rounded-lg hover:bg-clinical-100 transition active:scale-95">抑郁</button>
+                        <button onclick="setOnlineQuery('减肥')" class="text-[10px] bg-clinical-50 text-clinical-700 border border-clinical-100 px-2 py-1 rounded-lg hover:bg-clinical-100 transition active:scale-95">减肥</button>
+                    </div>
+                </div>
+
+                <!-- Recent Searches -->
+                <div id="onlineRecentWrap" class="hidden space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <p class="text-[10px] font-bold text-slate-500">最近查询：</p>
+                        <button onclick="clearRecent()" class="text-[10px] text-slate-400 hover:text-slate-600 transition">清空</button>
+                    </div>
+                    <div id="onlineRecent" class="flex flex-wrap gap-1.5"></div>
+                </div>
+            </div>
+
+            <!-- Source Grid -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                <h4 class="font-bold text-xs text-slate-800 flex items-center"><i class="fa-solid fa-bookmark text-clinical-600 mr-1.5"></i>选择权威来源查询</h4>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <button onclick="searchOnline('msd')" class="border border-clinical-200 bg-clinical-50/50 rounded-xl p-3 text-left hover:border-clinical-500 hover:shadow-sm transition active:scale-95 space-y-0.5">
+                        <div class="flex items-center space-x-1.5"><i class="fa-solid fa-book-medical text-clinical-600"></i><span class="font-bold text-slate-800">默沙东诊疗手册</span></div>
+                        <p class="text-[9px] text-slate-500 leading-tight">MSD Manuals · 本应用主要参考来源，覆盖全科疾病</p>
+                    </button>
+                    <button onclick="searchOnline('uptodate')" class="border border-slate-200 rounded-xl p-3 text-left hover:border-clinical-500 hover:shadow-sm transition active:scale-95 space-y-0.5">
+                        <div class="flex items-center space-x-1.5"><i class="fa-solid fa-database text-clinical-600"></i><span class="font-bold text-slate-800">UpToDate</span></div>
+                        <p class="text-[9px] text-slate-500 leading-tight">循证医学临床决策支持，专科深度内容</p>
+                    </button>
+                    <button onclick="searchOnline('who')" class="border border-slate-200 rounded-xl p-3 text-left hover:border-clinical-500 hover:shadow-sm transition active:scale-95 space-y-0.5">
+                        <div class="flex items-center space-x-1.5"><i class="fa-solid fa-earth-americas text-clinical-600"></i><span class="font-bold text-slate-800">WHO 世卫组织</span></div>
+                        <p class="text-[9px] text-slate-500 leading-tight">全球公共卫生标准、疫苗接种与流行病指南</p>
+                    </button>
+                    <button onclick="searchOnline('pubmed')" class="border border-slate-200 rounded-xl p-3 text-left hover:border-clinical-500 hover:shadow-sm transition active:scale-95 space-y-0.5">
+                        <div class="flex items-center space-x-1.5"><i class="fa-solid fa-flask text-clinical-600"></i><span class="font-bold text-slate-800">PubMed</span></div>
+                        <p class="text-[9px] text-slate-500 leading-tight">全球最大医学文献库，查最新研究证据</p>
+                    </button>
+                    <button onclick="searchOnline('nhs')" class="border border-slate-200 rounded-xl p-3 text-left hover:border-clinical-500 hover:shadow-sm transition active:scale-95 space-y-0.5">
+                        <div class="flex items-center space-x-1.5"><i class="fa-solid fa-hospital text-clinical-600"></i><span class="font-bold text-slate-800">NHS 英国国医</span></div>
+                        <p class="text-[9px] text-slate-500 leading-tight">通俗版健康百科，适合患者阅读</p>
+                    </button>
+                    <button onclick="searchOnline('mayo')" class="border border-slate-200 rounded-xl p-3 text-left hover:border-clinical-500 hover:shadow-sm transition active:scale-95 space-y-0.5">
+                        <div class="flex items-center space-x-1.5"><i class="fa-solid fa-user-doctor text-clinical-600"></i><span class="font-bold text-slate-800">梅奥诊所 Mayo</span></div>
+                        <p class="text-[9px] text-slate-500 leading-tight">梅奥诊所患者教育内容，疾病科普权威</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tips -->
+            <div class="bg-amber-50 border border-amber-200 p-3 rounded-2xl text-amber-900 text-[11px] leading-relaxed space-y-1.5">
+                <p class="font-bold flex items-center text-xs"><i class="fa-solid fa-lightbulb text-amber-600 mr-1.5"></i>查询技巧</p>
+                <ul class="list-disc pl-4 space-y-0.5">
+                    <li>用<strong>疾病通用名</strong>搜索（如"2型糖尿病"而非"消渴症"）</li>
+                    <li>不确定病名时，用<strong>核心症状</strong>搜索（如"咳血"、" 黄疸"）</li>
+                    <li>查药用<strong>通用名</strong>（如"对乙酰氨基酚"而非商品名）</li>
+                    <li>涉及化验单指标或英文术语时，PubMed 检索更准确</li>
+                </ul>
+                <p class="text-amber-700 pt-1">在线查询结果为外部网页内容，仅供参考，不替代医生面诊。急症请直接拨打 120。</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- BOTTOM NAV -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-1 py-2 z-30 shadow-lg">
+        <div class="max-w-md mx-auto grid grid-cols-6 text-center">
+            <button onclick="switchTab('knowledge')" id="nav-knowledge" class="nav-tab flex flex-col items-center space-y-0.5 text-clinical-600 transition active:scale-95"><i class="fa-solid fa-book-medical text-lg"></i><span class="text-[10px] font-medium">疾病百科</span></button>
+            <button onclick="switchTab('triage')" id="nav-triage" class="nav-tab flex flex-col items-center space-y-0.5 text-slate-400 transition active:scale-95"><i class="fa-solid fa-stethoscope text-lg"></i><span class="text-[10px] font-medium">症状评估</span></button>
+            <button onclick="switchTab('myths')" id="nav-myths" class="nav-tab flex flex-col items-center space-y-0.5 text-slate-400 transition active:scale-95"><i class="fa-solid fa-shield-virus text-lg"></i><span class="text-[10px] font-medium">科学辟谣</span></button>
+            <button onclick="switchTab('profile')" id="nav-profile" class="nav-tab flex flex-col items-center space-y-0.5 text-slate-400 transition active:scale-95"><i class="fa-solid fa-notes-medical text-lg"></i><span class="text-[10px] font-medium">健康档案</span></button>
+            <button onclick="switchTab('aid')" id="nav-aid" class="nav-tab flex flex-col items-center space-y-0.5 text-slate-400 transition active:scale-95"><i class="fa-solid fa-kit-medical text-lg"></i><span class="text-[10px] font-medium">急救用药</span></button>
+            <button onclick="switchTab('online')" id="nav-online" class="nav-tab flex flex-col items-center space-y-0.5 text-slate-400 transition active:scale-95"><i class="fa-solid fa-globe text-lg"></i><span class="text-[10px] font-medium">在线查询</span></button>
+        </div>
+    </nav>
+
+    <!-- DISEASE DETAIL MODAL -->
+    <div id="detailModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-md max-h-[88vh] rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col shadow-2xl animate-slide-up">
+            <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
+                <div class="pr-2"><h3 id="modalTitle" class="font-bold text-sm text-slate-800">疾病诊疗须知</h3><p id="modalCategoryTag" class="text-[10px] text-clinical-600 font-medium mt-0.5"></p></div>
+                <button onclick="closeModal('detailModal')" class="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center shrink-0 active:scale-90 transition"><i class="fa-solid fa-xmark text-sm"></i></button>
+            </div>
+            <div id="modalBody" class="p-4 overflow-y-auto space-y-4 text-xs leading-relaxed"></div>
+        </div>
+    </div>
+
+    <!-- FIRST AID DETAIL MODAL -->
+    <div id="aidDetailModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-md max-h-[88vh] rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col shadow-2xl animate-slide-up">
+            <div class="p-4 bg-rose-50 border-b border-rose-100 flex items-center justify-between shrink-0">
+                <div class="pr-2 flex items-center space-x-2"><div class="w-8 h-8 rounded-lg bg-medicred-500 text-white flex items-center justify-center"><i class="fa-solid fa-kit-medical"></i></div><h3 id="aidModalTitle" class="font-bold text-sm text-slate-800">急救指南</h3></div>
+                <button onclick="closeModal('aidDetailModal')" class="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center shrink-0 active:scale-90 transition"><i class="fa-solid fa-xmark text-sm"></i></button>
+            </div>
+            <div id="aidModalBody" class="p-4 overflow-y-auto space-y-4 text-xs leading-relaxed"></div>
+        </div>
+    </div>
+
+    <!-- SCIENCE MODAL -->
+    <div id="scienceModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl overflow-hidden shadow-2xl p-5 space-y-3 text-xs animate-fade-in">
+            <div class="flex items-center space-x-2 text-clinical-600 font-bold border-b border-slate-100 pb-2 text-sm"><i class="fa-solid fa-microscope text-lg"></i><span>循证医学与科学严谨度声明</span></div>
+            <p class="text-slate-600 leading-relaxed">本助手严格秉持<strong>循证医学（Evidence-Based Medicine, EBM）</strong>核心准则。知识库与诊疗建议均参考以下国际权威机构公开指南：</p>
+            <ul class="list-disc pl-4 space-y-1.5 text-slate-600"><li><strong class="text-slate-800">默沙东诊疗手册 (MSD Manuals)</strong> 专业版与大众版</li><li><strong class="text-slate-800">世界卫生组织 (WHO)</strong> 疾病预防与管理标准</li><li><strong class="text-slate-800">UpToDate 临床顾问</strong> 循证医学知识库</li><li><strong class="text-slate-800">辉瑞 / 强生</strong> 等制药机构公开的临床患者教育资源</li></ul>
+            <div class="bg-rose-50 p-2.5 rounded-xl border border-rose-100 text-rose-900 text-[11px] leading-relaxed"><strong>排除声明：</strong>坚决剔除未经大规模双盲随机对照临床试验（RCT）验证的偏方、验方以及无科学依据的传统习惯误区。严格消除中医理论中缺乏循证支持的内容。</div>
+            <button onclick="closeModal('scienceModal')" class="w-full bg-clinical-600 text-white font-bold py-2.5 rounded-xl text-center hover:bg-clinical-700 transition active:scale-95">已知晓并坚持科学态度</button>
+        </div>
+    </div>
+
+    <!-- VITAL ENTRY MODAL -->
+    <div id="addVitalModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-5 space-y-4 text-xs animate-fade-in">
+            <h3 class="font-bold text-sm text-slate-800 flex items-center"><i class="fa-solid fa-heart-pulse text-clinical-600 mr-1.5"></i>新增健康指标记录</h3>
+            <div class="space-y-3">
+                <div><label class="block text-slate-600 mb-1">指标类型</label><select id="vitalType" onchange="updateVitalPlaceholder()" class="w-full p-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-clinical-500 text-sm"><option value="bp">收缩压 (mmHg)</option><option value="temp">体温 ()</option><option value="glucose">空腹血糖 (mmol/L)</option></select></div>
+                <div><label class="block text-slate-600 mb-1">测算数值</label><input type="number" id="vitalVal" step="0.1" placeholder="例如: 120" class="w-full p-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-clinical-500 text-sm"></div>
+            </div>
+            <div class="flex space-x-2 pt-2"><button onclick="closeModal('addVitalModal')" class="flex-1 bg-slate-100 text-slate-600 py-2.5 rounded-xl font-medium transition active:scale-95">取消</button><button onclick="saveVitalRecord()" class="flex-[2] bg-clinical-600 text-white font-bold py-2.5 rounded-xl transition active:scale-95">保存记录</button></div>
+        </div>
+    </div>
+
+<script>
+// === 1. DISEASE DATABASE (24 diseases) ===
+const diseaseDatabase = [
+    { id:'urti', category:'resp', categoryName:'呼吸系统', title:'急性上呼吸道感染 (普通感冒)', desc:'多由病毒（如鼻病毒、冠状病毒）引起的自限性上呼吸道炎症，无特效抗病毒药。病程一般5-7天自限。', source:'MSD诊疗手册 / WHO上呼吸道感染指南', symptoms:['鼻塞、流涕','咽痛、咳嗽','低热或不发热','全身轻微酸痛'], redFlags:['发热超过38.5且持续大于3天无缓解','出现呼吸急促、喘息、胸痛或呼吸困难','剧烈咽痛伴有吞咽困难或说话含糊（排查会厌炎）'], careAndTreatments:['充分休息，保持充足的水分摄入（温水）','生理盐水喷鼻或鼻腔冲洗缓解鼻塞','发热或明显头痛咽痛时可按需使用对乙酰氨基酚或布洛芬','保持室内通风，注意手卫生，避免交叉感染'], myths:['误区：感冒就要吃抗生素（如阿莫西林/头孢）。事实：90%以上感冒由病毒引起，抗生素对病毒完全无效，且滥用会导致肠道菌群失调和耐药性。','误区：吃大剂量维C能快速治愈感冒。事实：临床证据表明发病后补充维C并不能缩短感冒病程。'], medications:'解热镇痛药（通用名：对乙酰氨基酚、布洛芬）；减充血剂（通用名：伪麻黄碱，高血压患者慎用）。' },
+    { id:'allergic_rhinitis', category:'resp', categoryName:'呼吸系统', title:'过敏性鼻炎 (变应性鼻炎)', desc:'特应性个体接触变应原（如花粉、尘螨）后由IgE介导的鼻黏膜非感染性慢性炎症。', source:'UpToDate 变应性鼻炎管理指南', symptoms:['阵发性喷嚏（连续多个）','清水样鼻涕','鼻痒、眼痒','鼻塞，可伴嗅觉减退'], redFlags:['伴有严重喘息、胸闷或夜间憋醒（排查合并过敏性哮喘发作）','单侧脓涕伴有面部剧烈压痛（排查并发急性细菌性鼻窦炎）'], careAndTreatments:['明确过敏原并进行针对性回避（使用防螨床单、空气净化器）','每日使用生理盐水进行鼻腔冲洗','一线治疗优先使用糖皮质激素鼻喷剂','规律用药，不可症状稍好就自行停药'], myths:['误区：鼻喷激素有毒会依赖，绝对不能用。事实：鼻喷糖皮质激素局部作用极强且全身吸收极少，按医嘱规范使用非常安全。','误区：长期滥用血管收缩剂鼻喷药（如萘甲唑啉）。事实：连续使用超过7天极易引发药物性鼻炎，导致鼻塞加重。'], medications:'鼻喷糖皮质激素（通用名：布地奈德鼻喷剂、糠酸莫米松鼻喷剂）；二代抗组胺药（通用名：氯雷他定、西替利嗪）。' },
+    { id:'acute_bronchitis', category:'resp', categoryName:'呼吸系统', title:'急性支气管炎', desc:'支气管黏膜的急性炎症，多继发于病毒性上呼吸道感染，以咳嗽为主要表现，可持续2-3周。', source:'MSD诊疗手册 / UpToDate', symptoms:['先有感冒症状后出现咳嗽','咳痰（可为黏液脓性）','胸骨后灼热或不适感','部分伴低热'], redFlags:['体温持续高于38.5超过5天','呼吸急促或费力、口唇紫绀','咳血或大量脓痰'], careAndTreatments:['充分休息和水分补充以稀释痰液','吸入温热蒸汽有助于缓解气道刺激','干咳严重影响休息时可短期使用镇咳药','多数为病毒感染，不需抗生素'], myths:['误区：支气管炎必须吃抗生素消炎。事实：大多数急性支气管炎由病毒引起，抗生素无效。仅当确认细菌感染或症状持续恶化时才考虑。'], medications:'镇咳药（通用名：右美沙芬，仅用于干咳严重影响睡眠）；祛痰药（通用名：氨溴索、乙酰半胱氨酸）。' },
+    { id:'asthma', category:'resp', categoryName:'呼吸系统', title:'支气管哮喘', desc:'以慢性气道炎症和可逆性气流受限为特征的异质性疾病，表现为反复发作的喘息、气促、胸闷和咳嗽。', source:'WHO哮喘管理指南 / MSD手册', symptoms:['反复发作喘息、呼气延长','胸闷、呼吸困难','夜间或清晨加重','可伴咳嗽，痰少'], redFlags:['急性大发作时说话不成句、端坐呼吸、大汗（哮喘急性重度发作）','口唇紫绀、意识模糊或嗜睡（呼吸衰竭前兆）','使用速效支气管扩张剂后不缓解或缓解很快复发'], careAndTreatments:['规律使用控制药物（吸入糖皮质激素），随身携带急救药物','识别并回避诱发因素：尘螨、花粉、冷空气、运动、烟雾','正确掌握吸入装置使用方法','定期复查肺功能，制定并更新个人哮喘行动计划'], myths:['误区：吸入激素有严重副作用，小孩用了长不高。事实：吸入激素剂量极小，规范使用的全身副作用微乎其微，不治疗反而影响发育和生活。','误区：哮喘不发作就可以停药。事实：哮喘的慢性气道炎症持续存在，擅自停药会导致反复发作和不可逆的气道重塑。'], medications:'控制药物（通用名：吸入糖皮质激素如布地奈德/福莫特罗）；急救药物（通用名：硫酸沙丁胺醇气雾剂）；白三烯受体拮抗剂（通用名：孟鲁司特钠）。' },
+    { id:'gastroenteritis', category:'digest', categoryName:'消化系统', title:'急性胃肠炎', desc:'胃肠道黏膜的急性炎症，多由食入被诺如病毒、轮状病毒或细菌污染的食物/水引起。', source:'MSD诊疗手册 消化系统疾病', symptoms:['恶心、呕吐','水样腹泻','阵发性脐周腹痛','可能伴有低热'], redFlags:['严重脱水征象：口干唇裂、眼窝深陷、皮肤弹性差、超过6小时无尿','大便带血或呈黏液脓血便','腹痛持续剧烈且呈板状腹（排查阑尾炎或穿孔）'], careAndTreatments:['核心原则：预防脱水！首选口服补液盐III (ORS III)','清淡饮食，无需盲目长时间禁食，可少量多次进食易消化食物','避免盲目使用强效止泻药（如洛哌丁胺，可能阻碍毒素排出）','注意手卫生和食品卫生，防止交叉感染'], myths:['误区：拉肚子要立刻吃蒜或喝高度酒杀菌。事实：大蒜素与酒精会极大刺激损伤已经发炎的胃肠黏膜，加重呕吐和腹泻。','误区：腹泻时不能喝水，越喝拉得越厉害。事实：不喝水会导致极高风险的脱水与电解质紊乱，甚至肾衰竭。'], medications:'口服补液盐（通用名：口服补液盐散III）；肠道黏膜保护剂（通用名：蒙脱石散）；益生菌（通用名：布拉氏酵母菌、枯草杆菌二联）。' },
+    { id:'gerd', category:'digest', categoryName:'消化系统', title:'胃食管反流病 (GERD)', desc:'胃内容物反流入食管引起不适症状或并发症的疾病，与下食管括约肌功能障碍相关。', source:'UpToDate / 辉瑞消化健康指南', symptoms:['烧心感（胸骨后烧灼感）','反酸、嗳气','餐后胸骨后疼痛','夜间干咳或咽喉不适'], redFlags:['出现进行性吞咽困难或吞咽疼痛','伴有不明原因的体重显著下降或贫血','呕吐物呈咖啡色或黑便（提示消化道出血）'], careAndTreatments:['餐后避免立即躺下，睡前3小时内禁食','抬高床头15-20cm（增加重力作用防反流）','控制体重，戒烟限酒，减少高脂食物、巧克力及咖啡因摄入','规律服用抑酸药物，不可自行随意停药'], myths:['误区：反酸烧心喝牛奶就能根治。事实：牛奶能暂时中和胃酸，但牛奶中的脂肪和钙会刺激胃酸二次大量分泌，加重反流。'], medications:'质子泵抑制剂（通用名：奥美拉唑、雷贝拉唑、艾司奥美拉唑）；H2受体拮抗剂（通用名：法莫替丁）；抗酸剂（通用名：铝碳酸镁）。' },
+    { id:'ibs', category:'digest', categoryName:'消化系统', title:'肠易激综合征 (IBS)', desc:'一种以腹痛/腹部不适伴排便习惯改变为特征的功能性肠病，无器质性病变。', source:'UpToDate 肠易激综合征循证指南', symptoms:['反复腹痛或腹部不适，排便后多缓解','腹泻与便秘交替','腹胀、排气多','排便不尽感'], redFlags:['夜间腹泻痛醒（功能性肠病通常不夜间发作）','体重不明原因进行性下降','便血、贫血或发热（需排除器质性疾病）'], careAndTreatments:['规律饮食，记录饮食-症状日记，识别并回避诱发食物','心理调节：减少焦虑压力，保证睡眠质量','适当增加膳食纤维（如燕麦、洋车前子壳）','对症治疗：腹痛用解痉药，腹泻用止泻药，便秘用通便药'], myths:['误区：肠易激就是"肠子坏了"，迟早变肠癌。事实：IBS是功能性肠病，不增加肠癌风险。但如有报警症状（便血、消瘦）须肠镜排查器质性病变。'], medications:'解痉药（通用名：匹维溴铵）；益生菌（通用名：双歧杆菌三联活菌）；渗透性泻药（通用名：聚乙二醇4000散）。' },
+    { id:'hemorrhoids', category:'digest', categoryName:'消化系统', title:'痔疮', desc:'直肠下端及肛管黏膜下静脉丛淤血扩张形成的静脉团块，可分为内痔、外痔和混合痔。', source:'MSD诊疗手册 消化系统', symptoms:['便血（鲜红色，滴或喷射）','肛门口肿物脱出','肛门瘙痒或潮湿','血栓外痔时剧痛'], redFlags:['便血呈暗红色或黑色（需排除上消化道出血或直肠肿瘤）','伴有不明原因消瘦、贫血','肛周红肿热痛伴发热（排查肛周脓肿）'], careAndTreatments:['增加膳食纤维和水分摄入，保持大便通畅柔软','温水坐浴（每次10-15分钟，每日2-3次）','避免久坐久站和如厕过久（不超过5分钟）','急性血栓外痔可在72小时内手术切除'], myths:['误区：便血一定是痔疮，不用管。事实：便血也可能是结直肠癌、息肉等严重疾病的信号。45岁以上首次出现便血必须肠镜检查。','误区：痔疮膏能根治痔疮。事实：药物只能缓解症状，不能消除已形成的静脉团。重度需手术干预。'], medications:'外用药（通用名：复方角菜酸酯栓/膏）；口服静脉血管药（通用名：地奥司明）。' },
+    { id:'hypertension', category:'cardio', categoryName:'心血管慢病', title:'原发性高血压', desc:'以体循环动脉血压增高（收缩压>=140mmHg和/或舒张压>=90mmHg）为特征的慢性心血管综合征。', source:'辉瑞/强生临床心血管指南 & MSD手册', symptoms:['多数人无明显症状（"隐形杀手"）','部分人可有头晕、后颈部紧绷感','易疲劳、心悸'], redFlags:['血压骤升至180/120 mmHg以上','伴有剧烈头痛、视物模糊、胸痛胸闷或肢体麻木无力（警惕高血压脑病或心梗）'], careAndTreatments:['严格低盐饮食（每日食盐<5克），增加富含钾的食物（蔬果）','规律有氧运动（每周150分钟中等强度），控制体重（BMI<24）','每日定时测量并记录血压（早晚各一次）','遵医嘱长期规范服药，不可自行停药或减量'], myths:['误区：没有头晕不适就不需要吃降压药。事实：血管受损在无症状中持续进行，无感高血压同样会导致心衰、肾衰和脑卒中。','误区：降压药有依赖性，吃了就停不掉。事实：降压药不具备成瘾性，长期服药是因为疾病本身需要持续控制。'], medications:'钙通道阻滞剂（通用名：苯磺酸氨氯地平、硝苯地平控释片）；ACEI/ARB类（通用名：厄贝沙坦、培哚普利）；利尿剂（通用名：氢氯噻嗪）。' },
+    { id:'chd', category:'cardio', categoryName:'心血管慢病', title:'冠状动脉粥样硬化性心脏病 (冠心病)', desc:'冠状动脉粥样硬化导致管腔狭窄或闭塞，引起心肌缺血、缺氧的心脏病。', source:'辉瑞心血管临床指南 / MSD手册', symptoms:['劳力性胸骨后压榨感/闷痛','疼痛向左肩臂、下颌或上腹放射','持续数分钟，休息或含服硝酸甘油可缓解','可伴出汗、心悸'], redFlags:['胸痛持续超过20分钟不缓解、大汗淋漓（急性心梗）','含服硝酸甘油后完全不缓解','伴呼吸困难、晕厥或严重心律失常'], careAndTreatments:['严格控制血压、血糖、血脂（LDL-C达标）','戒烟（最重要可控因素），限制饮酒','规范服用抗血小板药和他汀类药物','适度运动康复训练（需在医生指导下评估后进行）'], myths:['误区：冠心病只能静养不能运动。事实：在病情稳定后，科学的心脏康复运动可显著改善预后，降低再发风险。','误区：放完支架就根治了不用吃药。事实：支架只是解决局部狭窄，不等于治愈冠心病。仍需终身规范用药防止再狭窄和其他血管事件。'], medications:'抗血小板药（通用名：阿司匹林、氯吡格雷）；他汀类降脂（通用名：阿托伐他汀、瑞舒伐他汀）；硝酸酯类（通用名：硝酸甘油舌下片）；受体阻滞剂（通用名：美托洛尔）。' },
+    { id:'hyperlipidemia', category:'cardio', categoryName:'心血管慢病', title:'高脂血症 (血脂异常)', desc:'血浆中胆固醇和/或甘油三酯水平升高，是动脉粥样硬化和心血管事件的核心危险因素。', source:'强生/辉瑞心血管指南 / MSD手册', symptoms:['多数无任何症状（体检发现）','严重高甘油三酯可有黄色瘤','反复腹痛（极重度高甘油三酯诱发胰腺炎）'], redFlags:['甘油三酯>5.6 mmol/L（急性胰腺炎高风险）','LDL-C极高伴早发心血管病家族史'], careAndTreatments:['饮食控制：减少饱和脂肪和反式脂肪，增加可溶性纤维','规律有氧运动，减轻体重','戒烟限酒','定期复查血脂四项，心血管高危人群需药物干预'], myths:['误区：血脂高靠少吃肉就能降下来。事实：约70-80%的胆固醇由肝脏合成，饮食控制效果有限。高危人群必须药物干预。','误区：吃他汀伤肝不能长期吃。事实：他汀导致严重肝损伤的发生率极低，获益远大于风险。'], medications:'他汀类（通用名：阿托伐他汀、瑞舒伐他汀）；贝特类（通用名：非诺贝特 - 降甘油三酯）；胆固醇吸收抑制剂（通用名：依折麦布）。' },
+    { id:'diabetes_t2', category:'endo', categoryName:'内分泌/代谢', title:'2型糖尿病', desc:'以胰岛素抵抗为主伴胰岛素分泌不足导致的慢性血糖升高，易并发多器官慢性损害。', source:'WHO糖尿病诊疗指南 & MSD手册', symptoms:['多饮、多食、多尿','不明原因体重减轻','易疲劳、视力模糊','伤口愈合缓慢'], redFlags:['血糖高于16.7 mmol/L且伴有恶心呕吐、呼吸有烂苹果味（警惕酮症酸中毒）','出现头晕冷汗手抖心悸（低血糖反应，血糖<3.9mmol/L，需立即补充糖分）'], careAndTreatments:['医学营养治疗：控制总热量，选择低血糖生成指数（GI）食物','每周至少150分钟中等强度有氧运动','定期监测空腹及餐后2小时血糖，定期检查糖化血红蛋白（HbA1c）','定期筛查糖尿病视网膜病变、肾病及足部并发症'], myths:['误区：吃苦瓜/南瓜可以治愈糖尿病降血糖。事实：任何单一食物都不能替代降糖药，苦瓜提取物实验剂量与日常食用完全是两码事。','误区：无糖食品可以敞开吃。事实：无糖食品仅不含蔗糖，但主要成分仍是淀粉（碳水化合物），消化后同样转化为葡萄糖。'], medications:'双胍类（通用名：二甲双胍）；SGLT2抑制剂（通用名：达格列净、恩格列净）；DPP-4抑制剂（通用名：西格列汀）；胰岛素。' },
+    { id:'gout', category:'endo', categoryName:'内分泌/代谢', title:'高尿酸血症与痛风', desc:'嘌呤代谢紊乱导致血尿酸过高，单钠尿酸盐结晶沉积于关节引发的急性剧烈炎症。', source:'UpToDate 痛风管理循证指南', symptoms:['夜间突发单侧第一跖趾关节（大脚趾）剧痛','关节红肿热痛','触痛极明显','可累及踝、膝等关节'], redFlags:['发作伴有高热寒战（排查化脓性关节炎）','出现少尿无尿或剧烈腰痛（警惕尿酸性肾结石堵塞）'], careAndTreatments:['急性期：卧床休息、抬高患肢、局部冷敷（切勿热敷或按摩）','缓解期：每日饮水>2000ml以促进尿酸排泄','限制高嘌呤食物（动物内脏、浓肉汤、海鲜）及酒精（尤其是啤酒）','长期控制血尿酸<360umol/L（有痛风石者<300umol/L）'], myths:['误区：痛风发作时赶紧吃降尿酸药（如非布司他）。事实：急性期骤然降低尿酸会导致关节溶晶痛，加重病情！急性期应先抗炎止痛。','误区：喝骨头汤或小苏打水能根治痛风。事实：骨头汤富含脂肪和嘌呤只会加重病情。'], medications:'急性期（通用名：非甾体抗炎药如依托考昔、秋水仙碱）；降尿酸缓解期（通用名：别嘌醇、非布司他、苯溴马隆）。' },
+    { id:'hypothyroidism', category:'endo', categoryName:'内分泌/代谢', title:'甲状腺功能减退症', desc:'各种原因导致甲状腺激素合成或分泌不足引起的全身代谢减低综合征。', source:'MSD诊疗手册 内分泌篇 / UpToDate', symptoms:['乏力、嗜睡、畏寒','体重增加、便秘','皮肤干燥、面部浮肿','记忆力减退、心率减慢'], redFlags:['出现嗜睡、低体温（<35）、心动过缓（警惕黏液性水肿昏迷，需立即就医）'], careAndTreatments:['终身替代治疗：规律服用左甲状腺素钠','晨起空腹服药，与食物/其他药物间隔至少30分钟','定期复查甲状腺功能（TSH、FT4），根据结果调整剂量','不可自行停药或随意增减剂量'], myths:['误区：甲减可以靠吃海带紫菜补碘来治疗。事实：因桥本甲状腺炎导致的甲减，补碘不仅不能治疗反而可能加重甲状腺组织破坏。必须药物替代。'], medications:'甲状腺激素替代（通用名：左甲状腺素钠片）。' },
+    { id:'eczema', category:'skin', categoryName:'皮肤科', title:'特应性皮炎 / 湿疹', desc:'具有遗传倾向的慢性、复发性、炎症性皮肤病，伴有剧烈瘙痒和皮肤屏障受损。', source:'强生/MSD 皮肤病诊疗指南', symptoms:['皮肤剧烈瘙痒','红斑、丘疹、渗出或苔藓样变','皮肤干燥脱屑','好发于肘窝、腘窝、面部'], redFlags:['皮损处大面积红肿流脓结金黄色痂（提示继发金黄色葡萄球菌感染）','伴有高热或全身不适'], careAndTreatments:['核心基础：大量持续涂抹医用保湿霜（重建皮肤屏障）','洗澡水温不可过热（37-39），避免过度使用碱性肥皂','发作期在医师指导下短期外用弱/中效糖皮质激素软膏','避免搔抓和过度摩擦，保持指甲修剪'], myths:['误区：湿疹是因为皮肤"太湿了"，要保持干燥。事实：湿疹恰恰是因为皮肤屏障受损失水干燥造成的，保湿是第一治疗要素！','误区：激素软膏有毒绝对不能用。事实：外用激素是控制湿疹炎症的一线安全药物，按医嘱规范使用无需恐慌。'], medications:'外用糖皮质激素（通用名：氢化可的松乳膏、地奈德乳膏、糠酸莫米松乳膏）；钙调神经酶抑制剂（通用名：吡美莫司乳膏、他克莫司软膏）。' },
+    { id:'herpes_zoster', category:'skin', categoryName:'皮肤科', title:'带状疱疹 ("缠腰龙")', desc:'潜伏在神经节内的水痘-带状疱疹病毒再激活引发的沿单侧神经分布的簇集水疱与神经痛。', source:'MSD诊疗手册 皮肤病篇', symptoms:['单侧身体呈带状分布的成簇水疱','皮肤烧灼样、电击样或针刺样疼痛','局部皮肤感觉过敏','可有低热和乏力'], redFlags:['水疱长在眼眶周围或鼻尖（可能累及角膜导致失明，需极速眼科就诊）','水疱长在耳道或伴面瘫、听力下降（Ramsay Hunt综合征）'], careAndTreatments:['黄金治疗期：发病72小时内尽早启动口服抗病毒药物治疗','保持患处清洁干燥，避免挤破水疱','推荐50岁及以上人群接种重组带状疱疹疫苗进行预防','早期联合神经痛预防用药可降低后遗神经痛风险'], myths:['误区：带状疱疹在腰上缠绕一圈就会死人。事实：病毒沿单侧神经分布，极少跨越身体中线缠绕一圈，此说法纯属无稽之谈。','误区：找民间墨水或草药画圈涂抹能"封住"毒气。事实：草药涂抹极易引发严重继发性细菌感染。'], medications:'抗病毒药（通用名：阿昔洛韦、伐昔洛韦、泛昔洛韦）；神经痛治疗药（通用名：加巴喷丁、普瑞巴林）；外用（通用名：炉甘石洗剂）。' },
+    { id:'urticaria', category:'skin', categoryName:'皮肤科', title:'荨麻疹', desc:'由皮肤黏膜小血管扩张及通透性增加引起的一过性局部水肿，表现为风团和瘙痒。', source:'强生/MSD 皮肤病指南', symptoms:['突发的红色或苍白色风团','剧烈瘙痒','皮疹此起彼伏，单个风团24小时内消退不留痕','可累及黏膜'], redFlags:['伴喉头水肿、呼吸困难或声嘶（过敏性休克前兆，立即就医）','伴血压下降、头晕甚至晕厥','伴腹部剧痛或关节肿痛（严重血管性水肿）'], careAndTreatments:['识别并回避过敏原（食物、药物、感染、物理因素）','口服二代抗组胺药为一线治疗','急性严重发作可短期使用口服糖皮质激素','出现喉头水肿或过敏性休克立即肌注肾上腺素'], myths:['误区：荨麻疹是免疫力低下，要吃免疫增强剂。事实：多数荨麻疹是过敏反应（免疫过度激活方向异常），不需要所谓"提高免疫力"的药。'], medications:'二代抗组胺药（通用名：氯雷他定、西替利嗪、依巴斯汀）；一代抗组胺药（通用名：氯苯那敏，嗜睡明显）；急性重症（通用名：肾上腺素注射）。' },
+    { id:'migraine', category:'neuro', categoryName:'神经/痛症', title:'偏头痛', desc:'常见的神经系统慢性发作性疾病，特征为反复发作的搏动性中重度头痛。', source:'UpToDate 偏头痛循证指南', symptoms:['单侧或双侧搏动性（跳痛）头痛','伴有恶心呕吐','显著畏光畏声','活动后头痛加重'], redFlags:['突发平生最剧烈的爆裂样头痛（"霹雳样头痛"，排查蛛网膜下腔出血）','头痛伴发热颈项强直意识障碍或肢体抽搐','50岁以上首次新发头痛'], careAndTreatments:['发作时在安静、黑暗的房间内休息','记录"头痛日记"，识别并避开诱因（如缺乏睡眠、红酒、陈年奶酪、压力）','发作早期（轻中度）及时服用止痛药','频繁发作需预防性用药，不可过度依赖止痛药（警惕药物过度使用性头痛）'], myths:['误区：偏头痛是因为"脑子里长东西"或者"中风前兆"。事实：原发性偏头痛与脑血管/神经功能短暂紊乱有关，结构上通常无器质性病变。'], medications:'急性期解热镇痛药（通用名：布洛芬、对乙酰氨基酚、萘普生）；特异性止痛药（通用名：曲普坦类如佐米曲普坦，需处方）；止吐药（通用名：甲氧氯普胺）。' },
+    { id:'insomnia_anxiety', category:'neuro', categoryName:'神经/心理', title:'失眠与焦虑', desc:'以入睡困难、睡眠维持障碍或早醒为特征，常与焦虑情绪互为因果。', source:'UpToDate 失眠障碍循证指南', symptoms:['入睡困难（>30分钟）','夜间频繁觉醒','早醒后无法再入睡','日间困倦、注意力下降、易烦躁'], redFlags:['出现自杀念头或自伤行为','伴幻觉、妄想等精神病性症状','持续影响工作生活超过1个月无改善'], careAndTreatments:['认知行为治疗（CBT-I）是慢性失眠的一线非药物治疗','保持规律作息，固定就寝和起床时间','卧室环境：黑暗、安静、凉爽；床只用于睡眠','避免午后摄入咖啡因，睡前不饮酒（破坏睡眠结构）','规律有氧运动（但不建议睡前3小时内剧烈运动）'], myths:['误区：失眠就该吃安眠药，吃了就离不开了。事实：新型助眠药物在规范使用下成瘾性很低。不治疗的慢性失眠对心血管和认知功能的危害远大于药物副作用。','误区：睡前喝杯红酒助眠。事实：酒精虽缩短入睡时间，但严重破坏深睡眠和REM期，导致睡眠碎片化，次日更疲倦。'], medications:'非苯二氮卓类（通用名：唑吡坦、右佐匹克隆）；苯二氮卓类（通用名：阿普唑仑，短期使用）；褪黑素受体激动剂（通用名：雷美替胺）。' },
+    { id:'bppv', category:'neuro', categoryName:'神经/痛症', title:'良性阵发性位置性眩晕 (BPPV / 耳石症)', desc:'内耳耳石脱落后进入半规管，在头位变化时引起短暂发作性眩晕。', source:'MSD诊疗手册 神经篇 / UpToDate', symptoms:['头位变化时突发剧烈眩晕（<1分钟）','伴恶心呕吐','无听力下降、无意识障碍','可自行缓解但易复发'], redFlags:['眩晕伴肢体无力、口角歪斜或言语障碍（排查脑血管病）','伴持续头痛、视物成双或听力骤降','无法缓解的持续眩晕（>数小时）'], careAndTreatments:['耳石复位术（Epley法等）是首选治疗，效果显著','复位后短期内避免快速转头或低头','多数1-2次复位即可治愈','注意防跌倒，眩晕发作时立即蹲下或坐下'], myths:['误区：眩晕是"颈椎病"压迫血管引起的。事实：绝大多数阵发性位置性眩晕是耳石症，与颈椎无关。盲目按颈椎病治疗（牵引、推拿）不仅无效且有风险。'], medications:'一般不需长期用药。对症止晕药（通用名：倍他司汀、地芬尼多）仅用于缓解急性症状。' },
+    { id:'peds_fever', category:'peds', categoryName:'儿科常见', title:'小儿发热 (儿童发烧)', desc:'机体免疫系统抵御感染的正常生理反应，发热本身不是疾病而是症状。', source:'MSD诊疗手册 儿科篇 & WHO儿童发热指南', symptoms:['体温>37.3','可能伴有烦躁、食欲减退','轻微流涕或咳嗽','活动量减少'], redFlags:['小于3个月的婴儿出现发热（无论体温多少均须立即就医）','出现精神萎靡嗜睡难于唤醒眼神呆滞','出现呼吸急促呻吟持续剧烈哭闹或惊厥抽搐','发热持续超过5天不退'], careAndTreatments:['退热治疗的核心目标是提高患儿舒适度，而非强行将体温降至正常','保持室内通风，穿着透气舒适衣物。充分补充水分','体温>38.5且患儿有明显不适感时使用儿童专用退热药','严禁交替使用两种退热药（除非医生指导）'], myths:['误区：发烧捂汗退烧。事实：儿童体温调节中枢发育未完善，捂汗极易引发极高死亡率的"捂热综合征"！','误区：酒精擦浴降温。事实：酒精极易经幼儿娇嫩皮肤吸收导致急性酒精中毒与呼吸衰竭！','误区：给儿童使用阿司匹林退烧。事实：可能引发致死性的瑞氏综合征（Reye Syndrome）。'], medications:'儿童退热剂（通用名：对乙酰氨基酚混悬液[32mg/ml]、布洛芬混悬液[20mg/ml] - 严格按体重剂量给药）。' },
+    { id:'peds_hfm', category:'peds', categoryName:'儿科常见', title:'手足口病', desc:'由肠道病毒（多为柯萨奇病毒A16或EV71）引起的儿童常见传染病。', source:'WHO手足口病管理指南 / MSD手册', symptoms:['手、足、口及臀部出现斑丘疹或疱疹','低至中度发热','口腔疼痛、拒食流涎','精神可正常或稍差'], redFlags:['持续高热不退、精神极差嗜睡或易惊','肢体抖动或抽搐、呕吐（警惕神经源性肺水肿/脑干脑炎）','呼吸急促、口唇紫绀'], careAndTreatments:['多数为轻症自限性，7-10天自愈','口腔护理：温凉软食，避免酸性及刺激性食物','保持皮肤清洁，防止抓破疱疹继发感染','注意隔离至皮疹消退，避免交叉感染','EV71疫苗可有效预防重症手足口病'], myths:['误区：手足口病一定很严重。事实：绝大多数为轻症自限，但需密切观察是否出现重症征象（精神差、肢体抖动、呕吐）。'], medications:'对症处理为主。退热（通用名：对乙酰氨基酚混悬液）；口腔局部（通用名：开喉剑喷雾、利多卡因凝胶 - 饭前使用）。' },
+    { id:'vaginosis', category:'reproductive', categoryName:'妇科/男科', title:'霉菌性阴道炎 (外阴阴道假丝酵母菌病)', desc:'由假丝酵母菌（真菌）引起的常见外阴阴道炎症，与免疫力波动或菌群失调有关。', source:'UpToDate 妇科循证指南', symptoms:['外阴及阴道剧烈瘙痒烧灼感','豆腐渣样或凝乳状白带','排尿痛或性交痛','外阴红肿'], redFlags:['伴有下腹部剧烈疼痛发热（排查盆腔炎性疾病）','妊娠期妇女发病（需在医师指导下安全用药，防止早产）','一年内反复发作>=4次（复发性VVC，需排查糖尿病等基础疾病）'], careAndTreatments:['保持外阴清洁干燥，穿着透气棉质内裤','避免频繁过度使用抗菌洗液冲洗阴道（会破坏自净弱酸环境）','规范使用抗真菌药物治疗','性伴侣一般不需常规治疗（除非有龟头炎症状）'], myths:['误区：得了阴道炎就是因为"私生活不洁"。事实：假丝酵母菌是阴道内正常寄生菌，滥用抗生素、血糖控制不佳或免疫力下降均可诱发发病。','误区：用高锰酸钾或洗液每天灌洗能根治。事实：过度灌洗会杀灭乳杆菌，破坏阴道微生态屏障，导致炎症反复发作。'], medications:'局部抗真菌栓剂（通用名：克霉唑阴道片、咪康唑栓）；口服抗真菌药（通用名：氟康唑 - 复发或重症使用）。' },
+    { id:'uti', category:'reproductive', categoryName:'妇科/男科', title:'尿路感染', desc:'各种病原微生物在尿路中生长繁殖并侵犯尿路黏膜或组织引起的炎症。', source:'MSD诊疗手册 / UpToDate', symptoms:['尿频、尿急、尿痛（膀胱刺激征）','可伴肉眼血尿或尿液浑浊','下腹部不适或坠胀感','一般无发热（复杂性UTI除外）'], redFlags:['伴高热寒战腰痛（警惕急性肾盂肾炎）','妊娠期UTI（即使无症状也需治疗）','男性反复尿路感染（需排查前列腺及泌尿系统结构异常）'], careAndTreatments:['多饮水（每日>2000ml），勤排尿不憋尿','注意会阴部卫生，从前向后擦拭','在医生指导下规范使用抗生素治疗（须完成疗程）','治疗后复查尿常规确认治愈'], myths:['误区：尿路感染多喝蔓越莓汁就能治好。事实：蔓越莓提取物可能有助于预防反复发作，但不能替代抗生素治疗已发生的感染。'], medications:'一线抗生素（通用名：磷霉素氨丁三醇散、呋喃妥因）；二线（通用名：左氧氟沙星 - 复杂性UTI）；解痉止痛（通用名：黄酮哌酯）。' },
+    { id:'bph', category:'reproductive', categoryName:'妇科/男科', title:'良性前列腺增生 (BPH)', desc:'中老年男性因前列腺良性增大导致膀胱出口梗阻，引起下尿路症状。', source:'辉瑞泌尿指南 / MSD手册', symptoms:['尿频、夜尿增多','排尿起始困难、尿线变细','排尿费力、不尽感','可伴尿潴留或尿失禁'], redFlags:['急性尿潴留无法排尿（需立即导尿）','反复血尿（需排除前列腺癌）','伴肾功能损害（双肾积水、肌酐升高）'], careAndTreatments:['睡前限制饮水，避免酒精和咖啡因','避免久坐、憋尿，规律排尿','药物治疗可缩小前列腺或松弛尿道括约肌','重度或药物治疗无效者考虑手术（TURP等）'], myths:['误区：前列腺增生就是前列腺癌的前兆。事实：BPH是良性病变，与前列腺癌是不同疾病。但PSA升高时需排查癌变。','误区：前列腺肥大必须手术才能好。事实：轻中度BPH药物控制良好，仅重度或并发症者需手术。'], medications:'5-还原酶抑制剂（通用名：非那雄胺、度他雄胺 - 缩小前列腺）；1受体阻滞剂（通用名：坦索罗辛、多沙唑嗪 - 松弛尿道）。' }
+];
+
+// === 2. MYTHS DATABASE (12 myths) ===
+const mythsDatabase = [
+    { title:'发烧时赶紧"捂厚被子发汗"退烧', fact:'极度危险！', icon:'temperature-high', detail:'发热是体温调定点上移的过程，捂厚被子会导致热量无法散发，使体温飙升至40以上。尤其对幼儿而言，捂汗极易诱发高热惊厥乃至极高死亡率的"捂热综合征"。正确做法是解开衣物散热，体温高且不适时使用对乙酰氨基酚或布洛芬。' },
+    { title:'用医用酒精或白酒擦拭身体给发烧患者降温', fact:'严禁用于儿童！', icon:'wine-bottle', detail:'酒精蒸发虽然能暂时带走热量，但酒精极易透过娇嫩的皮肤吸收入血，导致急性酒精中毒、脑病甚至呼吸衰竭。物理降温仅推荐用温水擦拭，且核心应以药物退热为主。' },
+    { title:'生病或骨折后多喝"浓骨头汤"可以快速补钙', fact:'补钙微乎其微，反而增脂升尿酸', icon:'bone', detail:'骨头中的钙呈极难溶于水的磷酸钙。检测表明，100ml骨头汤中的钙仅约1-2毫克（而100ml牛奶含钙超100毫克）。骨头汤呈乳白色是因为脂肪乳化，长期大量喝骨头汤极易导致高脂血症和痛风发作。' },
+    { title:'急性胃肠炎拉肚子，吃几瓣大蒜或喝高度酒"杀菌"', fact:'雪上加霜', icon:'virus', detail:'大蒜中的大蒜素和酒精具有强烈的化学刺激性。急性胃肠炎时胃肠黏膜充血水肿，食用大蒜和酒精会造成黏膜二次损伤，加重腹痛、呕吐与腹泻。急性期首选补充口服补液盐防止脱水。' },
+    { title:'红糖水能补血治贫血', fact:'补铁效率极低', icon:'tint', detail:'红糖的主要成分是蔗糖（>90%），每100克红糖含铁仅约2-4毫克且为非血红素铁（吸收率<5%）。缺铁性贫血应摄入血红素铁（红肉、动物肝脏、血制品）并在医生指导下补充铁剂，而非靠红糖水。' },
+    { title:'高血压平时没感觉就不需要吃药，吃药会有"依赖性"', fact:'无感不等于无害！降压药无成瘾性', icon:'heart-pulse', detail:'高血压被称为"隐形杀手"，绝大多数靶器官损害（心肌肥厚、肾动脉硬化、脑血管病变）都在无症状中悄悄发生。降压药是帮助血管恢复正常压力的工具，不具备成瘾性，擅自停药极易导致血压反弹诱发脑出血。' },
+    { title:'感冒就要吃抗生素（阿莫西林、头孢）消炎', fact:'抗生素对病毒无效', icon:'pills', detail:'90%以上的感冒由病毒引起，抗生素只对细菌有效。滥用抗生素不仅不能缩短感冒病程，还会破坏肠道正常菌群、导致耐药菌株产生。仅在明确细菌感染（如化脓性扁桃体炎、细菌性鼻窦炎）时才需使用。' },
+    { title:'带状疱疹在腰上缠绕一圈就会死', fact:'纯属无稽之谈', icon:'shield-virus', detail:'水痘-带状疱疹病毒沿单侧感觉神经节分布，极少跨越身体中线"缠绕一圈"。这种说法毫无解剖学和病理学依据。真正需要警惕的是面部（尤其眼部）带状疱疹和后遗神经痛。' },
+    { title:'无糖食品可以放心敞开吃（糖尿病患者）', fact:'无糖不等于无碳水', icon:'cookie-bite', detail:'无糖食品仅不含蔗糖，但其主要成分仍是淀粉（面粉、米粉等碳水化合物），消化后同样转化为葡萄糖升高血糖。糖尿病患者应看食物的总碳水化合物含量和血糖生成指数（GI），而非仅看是否含蔗糖。' },
+    { title:'痛风发作时赶紧吃降尿酸药（非布司他/别嘌醇）', fact:'急性期用药反而加重病情！', icon:'hand-fist', detail:'痛风急性发作时，骤然降低血尿酸会导致沉积的尿酸盐结晶溶解释放，引发更剧烈的炎症（"溶晶痛"）。急性期应使用抗炎止痛药（非甾体抗炎药或秋水仙碱），降尿酸药应在发作完全缓解后2-4周才开始或继续使用。' },
+    { title:'骨头汤/猪蹄汤可以"补胶原蛋白"养颜', fact:'吃进去的胶原蛋白会被分解', icon:'hand-holding-heart', detail:'胶原蛋白是大分子蛋白质，口服后会在胃肠道被消化分解为氨基酸和小肽，不会直接"定向"补充到皮肤。身体会根据需要重新合成各类蛋白质。均衡蛋白质摄入和维生素C才是胶原蛋白合成的关键。' },
+    { title:'打了疫苗就不会得该病了', fact:'疫苗大幅降低风险但非100%', icon:'syringe', detail:'任何疫苗的保护率都不是100%。接种后仍有个体可能感染（突破性感染），但通常症状更轻、并发症更少。疫苗的核心价值在于降低重症率和传播率，而非绝对杜绝感染。完成全程接种和加强针至关重要。' }
+];
+
+// === 3. FIRST AID DATABASE (8 guides) ===
+const firstAidDatabase = [
+    { id:'cpr', title:'心肺复苏 (CPR)', icon:'heart-pulse', color:'medicred', urgency:'黄金4分钟', intro:'当有人突然倒地、呼之不应且无正常呼吸时，立即开始心肺复苏。时间就是生命。', steps:[
+        { title:'评估安全', desc:'确保现场环境安全，拍打双肩呼叫患者，检查是否有反应。' },
+        { title:'呼救拨打120', desc:'大声呼喊旁人帮忙拨打120并寻找AED（自动体外除颤器）。如果独自一人，先用手机拨打120开启免提，同时开始按压。' },
+        { title:'检查呼吸', desc:'观察胸腹部5-10秒是否有规律呼吸。如无呼吸或仅有濒死叹息样呼吸，立即开始CPR。' },
+        { title:'胸外按压', desc:'双手交叠掌根置于两乳头连线中点（胸骨下半部），双臂伸直垂直向下按压。按压深度5-6cm，频率100-120次/分钟。每次按压后让胸廓完全回弹。' },
+        { title:'人工呼吸（可选）', desc:'如受过训练：30次按压后给2次人工呼吸（捏鼻吹气，每次1秒，见胸廓起伏）。如未受过训练或不愿做人工呼吸，可仅做持续胸外按压（单纯按压CPR）。' },
+        { title:'使用AED', desc:'AED到达后立即开机，按语音提示贴电极片，按提示进行电击。电击后立即继续胸外按压，不要等待。' },
+        { title:'持续至专业人员到达', desc:'不间断地进行CPR和AED电击，直到患者恢复意识正常呼吸或120急救人员接手。' }
+    ], caution:'按压位置错误可能导致肋骨骨折或内脏损伤，但宁可按压位置稍有偏差也不能停止。肋骨骨折不是停止CPR的理由。' },
+    { id:'heimlich', title:'海姆立克急救法 (气道异物梗阻)', icon:'lungs', color:'ambermed', urgency:'立即施救', intro:'当有人双手掐住脖子、无法说话、无法咳嗽、面色青紫时，极可能是气道异物梗阻，需立即施救。', steps:[
+        { title:'判断梗阻', desc:'询问"你是不是呛住了？"如能点头但无法发声说话，确认气道完全梗阻，立即施救。' },
+        { title:'成人/儿童(>1岁) 海姆立克法', desc:'站在患者身后，双臂环绕其腰部。一手握拳，拳眼（拇指侧）放在肚脐上方两指处。另一手包住拳头，向内上方快速用力冲击腹部5次。' },
+        { title:'重复冲击', desc:'持续进行腹部冲击，每次用力快速向内上方冲击，直到异物排出或患者失去意识。' },
+        { title:'婴儿(<1岁) 拍背压胸法', desc:'将婴儿面朝下趴在前臂上，头部低于胸部，用手掌根部在背部两肩胛骨之间拍击5次。翻转婴儿面朝上，用两指在胸骨下半部快速按压5次。交替进行直至异物排出。' },
+        { title:'患者失去意识', desc:'立即小心放平患者，开始CPR（先检查口腔是否有可见异物可取出）。每30次按压后检查口腔。拨打120。' }
+    ], caution:'不要盲目用手指在口腔内掏取，可能将异物推更深。仅在肉眼可见且容易取出时才取出。婴儿切忌悬空倒拎拍打。' },
+    { id:'burn', title:'烧烫伤急救', icon:'fire', color:'ambermed', urgency:'冲水脱泡盖送', intro:'烧烫伤急救五字诀：冲、脱、泡、盖、送。前两步最为关键。', steps:[
+        { title:'冲 - 冷水冲洗', desc:'立即用流动冷水（15-25度）冲洗烧伤部位至少15-20分钟，可大幅降低深度烧伤风险和疼痛。不要用冰水或冰块（可致冻伤）。' },
+        { title:'脱 - 去除衣物', desc:'在冲洗同时小心剪开/脱去烧伤部位衣物。如衣物粘连皮肤，不可强行撕扯，剪除周围衣物即可。' },
+        { title:'泡 - 冷水浸泡', desc:'继续用冷水浸泡烧伤部位10-30分钟进一步降温止痛。' },
+        { title:'盖 - 干净覆盖', desc:'用干净纱布或保鲜膜轻轻覆盖创面，防止感染。切勿涂抹牙膏、酱油、面粉、芦荟等任何民间偏方！' },
+        { title:'送 - 及时就医', desc:'面积大于手掌、面部/会阴/关节处烧伤、化学烧伤、电击伤或III度烧伤（皮肤发白/焦黑、无痛）立即就医。' }
+    ], caution:'严禁涂抹牙膏、酱油、碱面、面粉、蛋清等任何民间物品在创面上！这些不仅无益反而增加感染风险并影响医生判断深度。水疱不要自行挑破。' },
+    { id:'bleeding', title:'外伤出血止血', icon:'droplet', color:'medicred', urgency:'按压止血', intro:'正确加压止血是外伤急救的核心。大多数体表出血可通过直接压迫止血。', steps:[
+        { title:'直接加压', desc:'用干净纱布或布料直接覆盖在出血伤口上，持续用力按压至少10-15分钟，期间不要松开查看。' },
+        { title:'抬高伤肢', desc:'如四肢出血且无骨折，将受伤部位抬高至高于心脏水平，利用重力减少出血。' },
+        { title:'加压包扎', desc:'出血减缓后用绷带在敷料外继续加压包扎固定。如血液浸透敷料，不要取下原敷料，在其上追加新敷料继续加压。' },
+        { title:'止血带（仅限紧急）', desc:'仅当四肢大动脉出血加压无效且危及生命时使用。记录上止血带的时间，每隔1小时松开一次（每次松15-30秒）。尽快送医。' },
+        { title:'立即就医', desc:'深部伤口、大面积伤口、面部伤口、疑似伤及大血管或肌腱、动物咬伤需立即就医。' }
+    ], caution:'不要用纸巾止血（纤维脱落易残留伤口内）。伤口内如有异物（如玻璃、刀片）不要拔出，在异物周围加压包扎后送医。' },
+    { id:'heatstroke', title:'中暑急救', icon:'temperature-high', color:'ambermed', urgency:'迅速降温', intro:'高温环境下出现头晕、恶心、体温飙升、意识模糊时，可能已发展为热射病（最严重中暑），致死率高。', steps:[
+        { title:'转移阴凉处', desc:'迅速将患者移至阴凉通风处或有空调的室内，平卧抬高双腿。' },
+        { title:'散热降温', desc:'解开或脱去多余衣物。用冷水擦拭全身，或在颈部、腋下、腹股沟处放置冰袋/冷毛巾。有条件可用冷水浸泡。' },
+        { title:'补充水分', desc:'如患者意识清醒可少量多次饮淡盐水或运动饮料。意识不清时切勿强行灌水（窒息风险）。' },
+        { title:'监测体温', desc:'力争在30分钟内将核心体温降至39以下。' },
+        { title:'立即就医', desc:'出现高热(>40)、意识障碍、抽搐或昏迷即为热射病，致死率超50%，必须立即拨打120。' }
+    ], caution:'不要给意识不清的患者喂水。不要使用退烧药（对乙酰氨基酚/布洛芬）——中暑的体温升高机制与感染发热不同，退烧药无效且可能加重肝损伤。' },
+    { id:'fracture', title:'骨折与扭伤急救', icon:'bone', color:'ambermed', urgency:'固定勿动', intro:'怀疑骨折时，核心原则是固定制动，避免二次损伤，切勿强行复位。', steps:[
+        { title:'制动固定', desc:'不要尝试移动受伤部位或强行复位。就地取材（木板、杂志、雨伞、硬纸板）固定受伤部位上下两个关节。' },
+        { title:'冷敷消肿', desc:'用冰袋或冷毛巾冷敷受伤部位（隔一层布防冻伤），每次15-20分钟，可减轻肿胀和疼痛。' },
+        { title:'抬高患肢', desc:'如为四肢骨折/扭伤且无禁忌，抬高患肢高于心脏水平以减轻肿胀。' },
+        { title:'检查远端血运', desc:'检查固定后手指/脚趾的颜色、温度和感觉是否正常。如出现苍白、发紫、麻木或冰凉，说明固定过紧需松开重固定。' },
+        { title:'及时送医', desc:'所有疑似骨折均需就医行X线检查。颈椎/脊柱/骨盆骨折需保持原地不动，等待专业急救人员搬运。' }
+    ], caution:'骨折断端穿出皮肤（开放性骨折）不要推回体内！用干净布料覆盖伤口加压止血。严禁暴力牵引或"正骨复位"——可能损伤血管神经。' },
+    { id:'poisoning', title:'中毒急救', icon:'skull-crossbones', color:'medicred', urgency:'拨打120', intro:'误食药物、化学品或农药中毒时，正确处置极为关键。', steps:[
+        { title:'立即拨打120', desc:'第一时间拨打120，说明中毒物质种类、时间和量。保留中毒物包装给医生参考。' },
+        { title:'经口中毒 - 不要盲目催吐', desc:'强酸、强碱、石油类产品（煤油、汽油）中毒严禁催吐（会二次灼伤食道或吸入肺内）。清醒患者可少量饮水稀释。' },
+        { title:'经口中毒 - 可催吐的情况', desc:'仅在意识清醒、误食非腐蚀性物质（如某些药物过量）时，可在专业人员指导下催吐。不确定时不要催吐。' },
+        { title:'吸入中毒', desc:'立即将患者移至空气新鲜处，解开衣领保持呼吸道通畅。' },
+        { title:'皮肤接触中毒', desc:'立即脱去污染衣物，用大量清水冲洗接触部位至少15分钟。' },
+        { title:'保留证据', desc:'保留呕吐物、剩余药物或化学品包装，供医院检测使用。' }
+    ], caution:'不要给昏迷患者催吐或喂任何东西（窒息风险）。不要使用"万能解毒剂"或民间偏方（如大量牛奶/蛋清），可能适得其反。' },
+    { id:'nosebleed', title:'鼻出血急救', icon:'head-side-cough', color:'tealmed', urgency:'低头捏鼻', intro:'鼻出血（鼻衄）时正确的姿势和按压方法至关重要。', steps:[
+        { title:'正确体位', desc:'坐位，身体微微前倾，低头（不要仰头！仰头会使血液流入咽喉引起呛咳或恶心呕吐）。' },
+        { title:'捏压鼻翼', desc:'用拇指和食指捏住鼻翼（鼻头两侧软骨部分），用口呼吸。持续捏压10-15分钟不松开。' },
+        { title:'冷敷后颈/前额', desc:'用冷毛巾或冰袋敷于后颈部或前额，促使血管收缩减少出血。' },
+        { title:'出血停止后', desc:'2小时内不要擤鼻涕、挖鼻孔或剧烈运动，防止再次出血。' },
+        { title:'以下情况立即就医', desc:'按压20分钟仍不止血；出血量大（填满口腔）；伴有高血压难以控制；频繁反复鼻出血；服用抗凝药期间。' }
+    ], caution:'不要仰头不要往鼻子里塞卫生纸团（粗糙纸面会摩擦损伤黏膜加重出血且取出时可能撕裂血痂）。不要用举手臂、扎手指等无循证依据的偏方。' }
+];
+
+// === 4. MEDICATION GUIDE DATABASE (10 categories) ===
+const medGuideDatabase = [
+    { category:'解热镇痛药', icon:'temperature-three-quarters', color:'medicred', meds:[
+        { generic:'对乙酰氨基酚 (Acetaminophen)', indications:'退热、轻中度疼痛（头痛、牙痛、肌肉痛）', dose:'成人每次500mg，间隔4-6h，每日最大4g。儿童10-15mg/kg/次', caution:'过量可致严重肝损伤。不可与复方感冒药叠加使用（多含对乙酰氨基酚）。' },
+        { generic:'布洛芬 (Ibuprofen)', indications:'退热、轻中度疼痛、炎症性疼痛', dose:'成人每次200-400mg，间隔6-8h，每日最大1.2g。儿童5-10mg/kg/次', caution:'胃肠刺激，建议饭后服用。消化道溃疡、肾功能不全者慎用。' }
+    ]},
+    { category:'抗组胺药 (抗过敏)', icon:'allergies', color:'tealmed', meds:[
+        { generic:'氯雷他定 (Loratadine)', indications:'过敏性鼻炎、荨麻疹等过敏性疾病', dose:'成人及12岁以上每次10mg，每日1次', caution:'二代抗组胺药，嗜睡少。2-12岁儿童需减量。' },
+        { generic:'西替利嗪 (Cetirizine)', indications:'过敏性鼻炎、荨麻疹、皮肤过敏', dose:'成人每次10mg，每日1次。6-12岁每次5mg', caution:'少数人有轻度嗜睡。肾功能不全需减量。' }
+    ]},
+    { category:'抑酸/抗酸药', icon:'prescription-bottle', color:'clinical', meds:[
+        { generic:'奥美拉唑 (Omeprazole)', indications:'胃食管反流、消化性溃疡、根除幽门螺杆菌', dose:'每次20mg，每日1次，早餐前30分钟口服', caution:'长期使用可影响骨密度和维生素B12吸收。不建议自行长期服用。' },
+        { generic:'铝碳酸镁 (Hydrotalcite)', indications:'快速缓解反酸、烧心、胃痛', dose:'每次1-2片，餐后1-2小时或症状时嚼服', caution:'起效快但持续时间短，不作为长期治疗药物。' }
+    ]},
+    { category:'止泻/补液药', icon:'toilet-paper', color:'ambermed', meds:[
+        { generic:'口服补液盐III (ORS III)', indications:'急性腹泻脱水的预防和治疗（首选）', dose:'每袋冲温开水250ml，少量多次频饮', caution:'不可用牛奶/果汁冲泡。肾功能不全者慎用。按需补充，不可限量。' },
+        { generic:'蒙脱石散 (Smectite)', indications:'急慢性腹泻的辅助治疗', dose:'成人每次1袋，每日3次。儿童减量', caution:'需空腹服用，与其他药物间隔2小时。可能影响其他药物吸收。' }
+    ]},
+    { category:'降压药', icon:'heart-pulse', color:'medicred', meds:[
+        { generic:'氨氯地平 (Amlodipine)', indications:'原发性及继发性高血压', dose:'起始5mg每日1次，可增至10mg', caution:'可引起下肢轻度水肿、面部潮红。不可与葡萄柚汁同服。' },
+        { generic:'厄贝沙坦 (Irbesartan)', indications:'高血压，尤其合并糖尿病肾病者', dose:'起始150mg每日1次', caution:'妊娠期绝对禁用。双侧肾动脉狭窄者禁用。' }
+    ]},
+    { category:'降糖药', icon:'syringe', color:'tealmed', meds:[
+        { generic:'二甲双胍 (Metformin)', indications:'2型糖尿病一线用药', dose:'起始500mg每日2次随餐服，可增至每日2g', caution:'餐中或餐后服用减少胃肠不适。造影检查前后需暂停。' },
+        { generic:'达格列净 (Dapagliflozin)', indications:'2型糖尿病，可降低心血管事件风险', dose:'10mg每日1次', caution:'增加泌尿生殖系统感染风险，需注意个人卫生。' }
+    ]},
+    { category:'降脂药', icon:'heart', color:'clinical', meds:[
+        { generic:'阿托伐他汀 (Atorvastatin)', indications:'高胆固醇血症、冠心病一级/二级预防', dose:'起始10-20mg每晚1次，可增至40-80mg', caution:'需监测肝酶和肌酸激酶。葡萄柚汁影响代谢。' },
+        { generic:'非诺贝特 (Fenofibrate)', indications:'高甘油三酯血症', dose:'每次200mg每日1次', caution:'与他汀联用需密切监测肌肉不良反应。' }
+    ]},
+    { category:'外用皮肤药', icon:'hand-dots', color:'ambermed', meds:[
+        { generic:'氢化可的松乳膏 (Hydrocortisone)', indications:'湿疹、接触性皮炎等非感染性炎症性皮肤病', dose:'薄涂患处每日1-2次', caution:'弱效激素，面部及儿童可短期使用。不可长期连续使用。' },
+        { generic:'炉甘石洗剂 (Calamine Lotion)', indications:'荨麻疹、蚊虫叮咬、带状疱疹局部止痒', dose:'摇匀后外涂患处，每日数次', caution:'皮肤破损处不宜使用。用前摇匀。' }
+    ]},
+    { category:'抗病毒药', icon:'shield-virus', color:'clinical', meds:[
+        { generic:'阿昔洛韦 (Acyclovir)', indications:'单纯疱疹、带状疱疹', dose:'带状疱疹：每次800mg每日5次，疗程7-10天', caution:'发病72小时内使用效果最佳。需充足饮水防肾结晶。' },
+        { generic:'伐昔洛韦 (Valacyclovir)', indications:'带状疱疹、生殖器疱疹', dose:'带状疱疹：每次1000mg每日3次，疗程7天', caution:'为阿昔洛韦前体药，口服生物利用度更高。' }
+    ]},
+    { category:'鼻喷/滴眼药', icon:'eye', color:'tealmed', meds:[
+        { generic:'布地奈德鼻喷剂 (Budesonide Nasal Spray)', indications:'过敏性鼻炎、鼻息肉', dose:'每侧鼻孔1-2喷(64-128g)，每日1次', caution:'鼻喷糖皮质激素，全身吸收极少。起效需数天，不可急停。' },
+        { generic:'左氧氟沙星滴眼液 (Levofloxacin Eye Drops)', indications:'细菌性结膜炎、角膜炎', dose:'每次1-2滴，每日3-5次', caution:'仅限细菌感染。病毒性结膜炎无效。不可长期使用。' }
+    ]}
+];
+
+// === 5. USER PROFILES ===
+const userProfiles = {
+    Self: { name:'本人', vitals:{ bp:{label:'收缩压(mmHg)', data:[118,122,120,119,121], unit:'mmHg'}, temp:{label:'体温()', data:[36.5,36.6,36.8,36.7,36.6], unit:''}, glucose:{label:'空腹血糖(mmol/L)', data:[5.2,5.5,5.1,5.3,5.4], unit:'mmol/L'} } },
+    Senior: { name:'长辈', vitals:{ bp:{label:'收缩压(mmHg)', data:[138,142,139,145,135], unit:'mmHg'}, temp:{label:'体温()', data:[36.3,36.4,36.5,36.3,36.4], unit:''}, glucose:{label:'空腹血糖(mmol/L)', data:[6.8,7.2,6.9,7.5,6.6], unit:'mmol/L'} } },
+    Child: { name:'孩子', vitals:{ bp:{label:'收缩压(mmHg)', data:[95,96,94,97,95], unit:'mmHg'}, temp:{label:'体温()', data:[36.5,36.6,37.1,36.8,36.6], unit:''}, glucose:{label:'空腹血糖(mmol/L)', data:[4.8,4.9,5.0,4.7,4.8], unit:'mmol/L'} } }
+};
+let currentMember = 'Self';
+let currentVitalType = 'bp';
+let chartInstance = null;
+let selectedTriageCategory = '';
+let selectedTriageLabel = '';
+let selectedDuration = '';
+let selectedDrug = '';
+
+// === TAB NAVIGATION ===
+function switchTab(tabId) {
+    document.querySelectorAll('.view-panel').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.nav-tab').forEach(el => { el.classList.remove('text-clinical-600'); el.classList.add('text-slate-400'); });
+    document.getElementById('view-'+tabId).classList.remove('hidden');
+    const activeNav = document.getElementById('nav-'+tabId);
+    activeNav.classList.remove('text-slate-400');
+    activeNav.classList.add('text-clinical-600');
+    if (tabId === 'profile') renderVitalsChart();
+    else if (tabId === 'myths') renderMyths();
+    else if (tabId === 'aid') renderFirstAid();
+    else if (tabId === 'online') renderOnlineRecent();
+    window.scrollTo({top:0, behavior:'smooth'});
+}
+function goToOnline() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (q) document.getElementById('onlineQueryInput').value = q;
+    switchTab('online');
+    setTimeout(() => document.getElementById('onlineQueryInput').focus(), 100);
+}
+
+// === ONLINE QUERY (6 sources) ===
+const onlineRecentCache = [];
+function searchOnline(source) {
+    const q = (document.getElementById('onlineQueryInput') && document.getElementById('onlineQueryInput').value.trim() || document.getElementById('searchInput').value.trim() || '');
+    if (!q) { alert('请先输入要查询的关键词'); return; }
+    saveRecent(q);
+    const encoded = encodeURIComponent(q);
+    const urls = {
+        msd: `https://www.msdmanuals.com/home/search?q=${encoded}`,
+        who: `https://www.who.int/search/results?terms=${encoded}`,
+        uptodate: `https://www.uptodate.com/contents/search?search=${encoded}`,
+        pubmed: `https://pubmed.ncbi.nlm.nih.gov/?term=${encoded}`,
+        nhs: `https://www.nhs.uk/search/?q=${encoded}`,
+        mayo: `https://www.mayoclinic.org/search/search-results?q=${encoded}`
+    };
+    window.open(urls[source], '_blank');
+}
+function setOnlineQuery(q) {
+    document.getElementById('onlineQueryInput').value = q;
+    searchOnline('msd');
+}
+function saveRecent(q) {
+    const idx = onlineRecentCache.indexOf(q);
+    if (idx > -1) onlineRecentCache.splice(idx, 1);
+    onlineRecentCache.unshift(q);
+    if (onlineRecentCache.length > 8) onlineRecentCache.pop();
+    try { localStorage.setItem('fdAssistantRecent', JSON.stringify(onlineRecentCache)); } catch(e) {}
+    renderOnlineRecent();
+}
+function clearRecent() {
+    onlineRecentCache.length = 0;
+    try { localStorage.removeItem('fdAssistantRecent'); } catch(e) {}
+    renderOnlineRecent();
+}
+function renderOnlineRecent() {
+    try {
+        const saved = JSON.parse(localStorage.getItem('fdAssistantRecent') || '[]');
+        onlineRecentCache.length = 0;
+        saved.forEach(s => onlineRecentCache.push(s));
+    } catch(e) {}
+    const wrap = document.getElementById('onlineRecentWrap');
+    const box = document.getElementById('onlineRecent');
+    if (!box) return;
+    if (onlineRecentCache.length === 0) { wrap.classList.add('hidden'); return; }
+    wrap.classList.remove('hidden');
+    box.innerHTML = onlineRecentCache.map(q =>
+        `<button onclick="setOnlineQuery('${q.replace(/'/g, "\\'")}')" class="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded-lg hover:bg-clinical-50 hover:text-clinical-700 transition active:scale-95">${q}</button>`
+    ).join('');
+}
+function renderOnlineEntry(query) {
+    const container = document.getElementById('diseaseList');
+    const card = document.createElement('div');
+    card.className = "bg-gradient-to-br from-clinical-50 to-tealmed-50 p-3.5 rounded-2xl border border-clinical-200 shadow-sm cursor-pointer active:scale-[0.98] transition";
+    card.onclick = goToOnline;
+    card.innerHTML = `
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-clinical-600 to-tealmed-600 text-white flex items-center justify-center shrink-0"><i class="fa-solid fa-globe"></i></div>
+                <div>
+                    <h4 class="font-bold text-xs text-slate-800">没找到想查的？去在线查询</h4>
+                    <p class="text-[10px] text-slate-500 mt-0.5">${query ? '当前关键词「'+query+'」将自动带入 · ' : ''}默沙东/UpToDate/WHO/PubMed 等 6 大权威来源</p>
+                </div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-slate-400 text-xs shrink-0"></i>
+        </div>`;
+    container.appendChild(card);
+}
+function renderDiseases(items) {
+    const container = document.getElementById('diseaseList');
+    container.innerHTML = '';
+    const query = document.getElementById('searchInput').value.trim();
+    if (items.length === 0) {
+        container.innerHTML = `
+        <div class="text-center py-6 text-slate-400 text-xs space-y-1">
+            <i class="fa-solid fa-magnifying-glass text-2xl text-slate-300 mb-2"></i>
+            <p>本地知识库中暂无「${query}」相关内容</p>
+            <p class="text-[10px]">您可以通过下方权威医学来源在线查询</p>
+        </div>`;
+        renderOnlineEntry(query);
+        return;
+    }
+    items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = "bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition cursor-pointer space-y-2 active:scale-[0.98]";
+        card.onclick = () => openDiseaseDetail(item.id);
+        card.innerHTML = `
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-semibold bg-clinical-50 text-clinical-700 px-2 py-0.5 rounded">${item.categoryName}</span>
+                <span class="text-[10px] text-slate-400 flex items-center">详情 <i class="fa-solid fa-chevron-right ml-1 text-[8px]"></i></span>
+            </div>
+            <h4 class="font-bold text-sm text-slate-800">${item.title}</h4>
+            <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed">${item.desc}</p>
+            <div class="pt-1 flex flex-wrap gap-1">
+                ${item.symptoms.slice(0,3).map(s => `<span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">${s}</span>`).join('')}
+            </div>`;
+        container.appendChild(card);
+    });
+}
+function filterKnowledge() {
+    const q = document.getElementById('searchInput').value.toLowerCase().trim();
+    const filtered = diseaseDatabase.filter(item =>
+        item.title.toLowerCase().includes(q) ||
+        item.desc.toLowerCase().includes(q) ||
+        item.symptoms.some(s => s.toLowerCase().includes(q)) ||
+        item.medications.toLowerCase().includes(q)
+    );
+    renderDiseases(filtered);
+    renderOnlineEntry(document.getElementById('searchInput').value.trim());
+}
+function filterCategory(cat, btn) {
+    document.querySelectorAll('.cat-btn').forEach(b => { b.classList.remove('bg-clinical-600','text-white'); b.classList.add('bg-white','text-slate-600'); });
+    btn.classList.remove('bg-white','text-slate-600'); btn.classList.add('bg-clinical-600','text-white');
+    if (cat === 'all') { renderDiseases(diseaseDatabase); renderOnlineEntry(''); }
+    else { renderDiseases(diseaseDatabase.filter(i => i.category === cat)); renderOnlineEntry(''); }
+}
+function openDiseaseDetail(id) {
+    const item = diseaseDatabase.find(i => i.id === id);
+    if (!item) return;
+    document.getElementById('modalTitle').innerText = item.title;
+    document.getElementById('modalCategoryTag').innerText = `【${item.categoryName}】 循证来源: ${item.source}`;
+    document.getElementById('modalBody').innerHTML = `
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200"><h5 class="font-bold text-slate-800 mb-1">疾病概述：</h5><p class="text-slate-600 text-[11px] leading-relaxed">${item.desc}</p></div>
+        <div class="space-y-1"><h5 class="font-bold text-slate-800 flex items-center"><i class="fa-solid fa-notes-medical text-clinical-600 mr-1.5"></i> 常见临床表现</h5><ul class="list-disc pl-4 text-slate-600 space-y-0.5">${item.symptoms.map(s => `<li>${s}</li>`).join('')}</ul></div>
+        <div class="space-y-1 bg-rose-50 p-3 rounded-xl border border-rose-100"><h5 class="font-bold text-rose-800 flex items-center"><i class="fa-solid fa-triangle-exclamation text-rose-600 mr-1.5"></i> 警惕红旗预警（出现必须立即就医）</h5><ul class="list-disc pl-4 text-rose-700 space-y-1">${item.redFlags.map(r => `<li>${r}</li>`).join('')}</ul></div>
+        <div class="space-y-1"><h5 class="font-bold text-slate-800 flex items-center"><i class="fa-solid fa-hand-holding-medical text-tealmed-600 mr-1.5"></i> 循证治疗与居家护理建议</h5><ul class="list-disc pl-4 text-slate-600 space-y-1">${item.careAndTreatments.map(c => `<li>${c}</li>`).join('')}</ul></div>
+        <div class="space-y-1 bg-amber-50 p-3 rounded-xl border border-amber-100"><h5 class="font-bold text-amber-900 flex items-center"><i class="fa-solid fa-shield-virus text-amber-600 mr-1.5"></i> 常见误区与科学辟谣</h5><ul class="space-y-1 text-amber-900">${item.myths.map(m => `<li>${m}</li>`).join('')}</ul></div>
+        <div class="bg-clinical-50 p-3 rounded-xl border border-clinical-100"><h5 class="font-bold text-clinical-800 mb-1 flex items-center"><i class="fa-solid fa-pills mr-1.5"></i> 合理用药指导 (药品通用名)</h5><p class="text-clinical-700 text-[11px] leading-relaxed">${item.medications}</p></div>`;
+    document.getElementById('detailModal').classList.remove('hidden');
+}
+
+// === MYTHS ===
+function renderMyths() {
+    const container = document.getElementById('mythsList');
+    container.innerHTML = '';
+    mythsDatabase.forEach(item => {
+        const card = document.createElement('div');
+        card.className = "bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2 text-xs active:scale-[0.99] transition";
+        card.innerHTML = `
+            <h4 class="font-bold text-rose-700 text-sm flex items-start"><i class="fa-solid fa-circle-xmark mt-0.5 mr-1.5 shrink-0"></i><span>${item.title}</span></h4>
+            <div class="bg-tealmed-50 p-2.5 rounded-xl border border-tealmed-100 text-tealmed-900 font-bold"><i class="fa-solid fa-circle-check text-tealmed-600 mr-1"></i> ${item.fact}</div>
+            <p class="text-slate-600 leading-relaxed text-[11px] pl-1">${item.detail}</p>`;
+        container.appendChild(card);
+    });
+}
+
+// === TRIAGE WIZARD ===
+function selectTriageSymptom(cat, label) {
+    selectedTriageCategory = cat;
+    selectedTriageLabel = label;
+    document.getElementById('triageStep1').classList.add('hidden');
+    document.getElementById('triageStep2').classList.remove('hidden');
+}
+function selectDuration(dur, btn) {
+    selectedDuration = dur;
+    document.querySelectorAll('.dur-opt').forEach(b => { b.classList.remove('bg-clinical-600','text-white','border-clinical-600'); b.classList.add('border-slate-200'); });
+    btn.classList.remove('border-slate-200');
+    btn.classList.add('bg-clinical-600','text-white','border-clinical-600');
+    document.getElementById('triageStep2').classList.add('hidden');
+    document.getElementById('triageStep3').classList.remove('hidden');
+}
+function resetTriage() {
+    selectedTriageCategory = ''; selectedTriageLabel = ''; selectedDuration = '';
+    document.querySelectorAll('.redflag-chk').forEach(c => c.checked = false);
+    document.querySelectorAll('.dur-opt').forEach(b => { b.classList.remove('bg-clinical-600','text-white','border-clinical-600'); b.classList.add('border-slate-200'); });
+    document.getElementById('triageStep1').classList.remove('hidden');
+    document.getElementById('triageStep2').classList.add('hidden');
+    document.getElementById('triageStep3').classList.add('hidden');
+    document.getElementById('triageResult').classList.add('hidden');
+}
+function evaluateTriage() {
+    const hasRedFlags = Array.from(document.querySelectorAll('.redflag-chk')).some(c => c.checked);
+    const flagCount = Array.from(document.querySelectorAll('.redflag-chk')).filter(c => c.checked).length;
+    const banner = document.getElementById('resultBanner');
+    const summary = document.getElementById('triageSummary');
+    document.getElementById('triageStep3').classList.add('hidden');
+    document.getElementById('triageResult').classList.remove('hidden');
+    const durText = selectedDuration === 'acute' ? '突发（数小时内）' : selectedDuration === 'subacute' ? '近期（1-3天）' : '持续（>3天）';
+    if (hasRedFlags) {
+        const level = flagCount >= 3 ? '红色预警' : flagCount >= 1 ? '红色预警' : '';
+        banner.className = "p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs space-y-1";
+        banner.innerHTML = `<div class="font-bold flex items-center text-rose-700 text-sm"><i class="fa-solid fa-circle-exclamation mr-1.5"></i> 评估结论：红色预警 (建议立即急诊就医)</div><p class="leading-relaxed">检测到 ${flagCount} 项可能危及生命的严重红旗指标，请勿继续在家自行观察。请立即前往最近医院急诊科或拨打120急救。</p>`;
+    } else {
+        const isAcute = selectedDuration === 'acute' || selectedDuration === 'subacute';
+        if (isAcute && (selectedTriageCategory === 'chest' || selectedTriageCategory === 'dyspnea' || selectedTriageCategory === 'neuro')) {
+            banner.className = "p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1";
+            banner.innerHTML = `<div class="font-bold flex items-center text-amber-700 text-sm"><i class="fa-solid fa-triangle-exclamation mr-1.5"></i> 评估结论：黄色预警 (建议尽快门诊就医)</div><p class="leading-relaxed">虽未检出紧急红旗信号，但该类症状仍有潜在风险。建议尽早至医院门诊就诊排查，不宜拖延。</p>`;
+        } else {
+            banner.className = "p-3.5 rounded-xl bg-tealmed-50 border border-tealmed-200 text-tealmed-900 text-xs space-y-1";
+            banner.innerHTML = `<div class="font-bold flex items-center text-tealmed-700 text-sm"><i class="fa-solid fa-circle-check mr-1.5"></i> 评估结论：绿色指示 (居家护理或门诊)</div><p class="leading-relaxed">暂未筛查出紧急危重红旗信号。建议参照疾病百科中对应的指南实施循证护理。若症状加重或超过3天无缓解，请至医院普通门诊就诊。</p>`;
+        }
+    }
+    summary.innerHTML = `患者主诉：${selectedTriageLabel}<br>症状持续时间：${durText}<br>危险信号筛查：${hasRedFlags ? '存在 '+flagCount+' 项高度危险红旗指标' : '未见明显紧急危重指标'}<br>循证分诊建议：${hasRedFlags ? '立即急诊科就诊/拨打120' : '对症居家护理，必要时社区门诊就诊'}`;
+}
+
+// === HEALTH PROFILE & CHART ===
+function switchMember(member, btn) {
+    currentMember = member;
+    document.querySelectorAll('.member-btn').forEach(b => { b.classList.remove('bg-clinical-600','text-white'); b.classList.add('bg-slate-100','text-slate-600'); });
+    btn.classList.remove('bg-slate-100','text-slate-600'); btn.classList.add('bg-clinical-600','text-white');
+    document.getElementById('currentMemberName').innerText = userProfiles[member].name;
+    currentVitalType = 'bp';
+    document.getElementById('vitalType').value = 'bp';
+    renderVitalsChart();
+    renderMedications();
+}
+function renderVitalsChart() {
+    const ctx = document.getElementById('vitalsChart').getContext('2d');
+    const member = userProfiles[currentMember];
+    const vital = member.vitals[currentVitalType];
+    if (chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: { labels: ['记录1','记录2','记录3','记录4','最新'], datasets: [{ label: vital.label, data: vital.data, borderColor: '#0284c7', backgroundColor: 'rgba(2,132,199,0.1)', fill: true, tension: 0.3, pointRadius: 5, pointBackgroundColor: '#0284c7' }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top', labels: { font: { size: 10 } } } }, scales: { y: { beginAtZero: false, ticks: { font: { size: 9 } } }, x: { ticks: { font: { size: 9 } } } } }
+    });
+    // Stats
+    const stats = document.getElementById('vitalsStats');
+    const data = vital.data;
+    const latest = data[data.length-1];
+    const avg = (data.reduce((a,b)=>a+b,0)/data.length).toFixed(1);
+    const trend = data[data.length-1] >= data[0] ? 'up' : 'down';
+    const trendIcon = trend === 'up' ? '<i class="fa-solid fa-arrow-trend-up text-rose-500"></i>' : '<i class="fa-solid fa-arrow-trend-down text-tealmed-500"></i>';
+    stats.innerHTML = `
+        <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center"><p class="text-[10px] text-slate-400">最新值</p><p class="text-sm font-bold text-slate-800">${latest}<span class="text-[9px] font-normal text-slate-400 ml-0.5">${vital.unit}</span></p></div>
+        <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center"><p class="text-[10px] text-slate-400">平均值</p><p class="text-sm font-bold text-slate-800">${avg}<span class="text-[9px] font-normal text-slate-400 ml-0.5">${vital.unit}</span></p></div>
+        <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center"><p class="text-[10px] text-slate-400">趋势</p><p class="text-sm font-bold">${trendIcon}</p></div>`;
+}
+function renderMedications() {
+    const container = document.getElementById('medList');
+    const medData = {
+        Self: [{ name:'氯雷他定片', spec:'10mg / 每日一次', note:'缓解过敏性鼻炎' }],
+        Senior: [{ name:'苯磺酸氨氯地平片', spec:'5mg / 每日晨服', note:'原发性高血压控制' },{ name:'二甲双胍片', spec:'0.5g / 随餐服用', note:'血糖管理' },{ name:'阿托伐他汀片', spec:'20mg / 每晚一次', note:'血脂管理' }],
+        Child: [{ name:'布洛芬混悬液', spec:'按体重用药', note:'备用退热药' }]
+    };
+    const list = medData[currentMember] || [];
+    container.innerHTML = list.map(m => `
+        <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+            <div><div class="font-bold text-slate-800">${m.name}</div><div class="text-[10px] text-slate-500">${m.spec} | ${m.note}</div></div>
+            <span class="text-[10px] bg-tealmed-100 text-tealmed-800 px-2 py-0.5 rounded-md font-medium">遵医嘱</span>
+        </div>`).join('');
+}
+function updateVitalPlaceholder() {
+    currentVitalType = document.getElementById('vitalType').value;
+    const ph = currentVitalType === 'bp' ? '例如: 120' : currentVitalType === 'temp' ? '例如: 36.6' : '例如: 5.6';
+    document.getElementById('vitalVal').placeholder = ph;
+    renderVitalsChart();
+}
+function saveVitalRecord() {
+    const val = parseFloat(document.getElementById('vitalVal').value);
+    if (!val) return;
+    const member = userProfiles[currentMember];
+    const vital = member.vitals[currentVitalType];
+    vital.data.shift();
+    vital.data.push(val);
+    closeModal('addVitalModal');
+    document.getElementById('vitalVal').value = '';
+    renderVitalsChart();
+}
+
+// === FIRST AID ===
+function switchAidTab(tab, btn) {
+    document.querySelectorAll('.aid-tab').forEach(b => { b.classList.remove('bg-clinical-600','text-white'); b.classList.add('text-slate-500'); });
+    btn.classList.remove('text-slate-500'); btn.classList.add('bg-clinical-600','text-white');
+    ['firstaid','medguide','dosage'].forEach(t => {
+        const el = document.getElementById('aidTab-'+t);
+        if (t === tab) el.classList.remove('hidden'); else el.classList.add('hidden');
+    });
+    if (tab === 'medguide') renderMedGuide();
+}
+function renderFirstAid() {
+    const container = document.getElementById('firstAidList');
+    container.innerHTML = '';
+    firstAidDatabase.forEach(item => {
+        const colorMap = { medicred:'bg-medicred-500', ambermed:'bg-ambermed-500', tealmed:'bg-tealmed-500', clinical:'bg-clinical-600' };
+        const card = document.createElement('div');
+        card.className = "bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2 cursor-pointer active:scale-[0.99] transition";
+        card.onclick = () => openFirstAidDetail(item.id);
+        card.innerHTML = `
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-lg ${colorMap[item.color]} text-white flex items-center justify-center"><i class="fa-solid fa-${item.icon}"></i></div>
+                    <h4 class="font-bold text-sm text-slate-800">${item.title}</h4>
+                </div>
+                <span class="text-[10px] bg-rose-50 text-rose-600 px-2 py-0.5 rounded font-medium">${item.urgency}</span>
+            </div>
+            <p class="text-xs text-slate-500 leading-relaxed">${item.intro}</p>
+            <div class="text-[10px] text-clinical-600 flex items-center">查看详细步骤 <i class="fa-solid fa-chevron-right ml-1"></i></div>`;
+        container.appendChild(card);
+    });
+}
+function openFirstAidDetail(id) {
+    const item = firstAidDatabase.find(i => i.id === id);
+    if (!item) return;
+    document.getElementById('aidModalTitle').innerText = item.title;
+    document.getElementById('aidModalBody').innerHTML = `
+        <div class="bg-rose-50 p-3 rounded-xl border border-rose-100 space-y-1">
+            <p class="text-[10px] font-bold text-rose-600">紧急程度：${item.urgency}</p>
+            <p class="text-slate-600 text-[11px] leading-relaxed">${item.intro}</p>
+        </div>
+        <div class="space-y-3">
+            ${item.steps.map((s,i) => `
+                <div class="flex space-x-3">
+                    <div class="shrink-0 w-7 h-7 rounded-full bg-clinical-600 text-white flex items-center justify-center text-xs font-bold">${i+1}</div>
+                    <div class="flex-1 pb-1">
+                        <h5 class="font-bold text-slate-800 text-xs mb-0.5">${s.title}</h5>
+                        <p class="text-slate-600 text-[11px] leading-relaxed">${s.desc}</p>
+                    </div>
+                </div>`).join('')}
+        </div>
+        <div class="bg-amber-50 p-3 rounded-xl border border-amber-100">
+            <h5 class="font-bold text-amber-800 text-xs mb-1 flex items-center"><i class="fa-solid fa-triangle-exclamation text-amber-600 mr-1"></i> 重要警示</h5>
+            <p class="text-amber-900 text-[11px] leading-relaxed">${item.caution}</p>
+        </div>`;
+    document.getElementById('aidDetailModal').classList.remove('hidden');
+}
+
+// === MEDICATION GUIDE ===
+function renderMedGuide() {
+    const container = document.getElementById('medGuideList');
+    container.innerHTML = '';
+    const colorMap = { medicred:'text-medicred-600 bg-medicred-50', tealmed:'text-tealmed-600 bg-tealmed-50', clinical:'text-clinical-600 bg-clinical-50', ambermed:'text-ambermed-600 bg-ambermed-50' };
+    medGuideDatabase.forEach(cat => {
+        const card = document.createElement('div');
+        card.className = "bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3";
+        card.innerHTML = `
+            <div class="flex items-center space-x-2 border-b border-slate-100 pb-2">
+                <div class="w-7 h-7 rounded-lg ${colorMap[cat.color]} flex items-center justify-center"><i class="fa-solid fa-${cat.icon} text-sm"></i></div>
+                <h4 class="font-bold text-sm text-slate-800">${cat.category}</h4>
+            </div>
+            <div class="space-y-2">
+                ${cat.meds.map(m => `
+                    <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 space-y-1">
+                        <div class="font-bold text-slate-800 text-xs">${m.generic}</div>
+                        <div class="text-[10px] text-slate-500"><span class="text-slate-400">适应症：</span>${m.indications}</div>
+                        <div class="text-[10px] text-slate-500"><span class="text-slate-400">用法用量：</span>${m.dose}</div>
+                        <div class="text-[10px] text-amber-700"><span class="font-medium">注意：</span>${m.caution}</div>
+                    </div>`).join('')}
+            </div>`;
+        container.appendChild(card);
+    });
+}
+
+// === DOSAGE CALCULATOR ===
+function selectDrug(drug, btn) {
+    selectedDrug = drug;
+    document.querySelectorAll('.drug-opt').forEach(b => { b.classList.remove('border-clinical-500','bg-clinical-50'); b.classList.add('border-slate-200'); });
+    btn.classList.remove('border-slate-200'); btn.classList.add('border-clinical-500','bg-clinical-50');
+}
+function calcDosage() {
+    const weight = parseFloat(document.getElementById('childWeight').value);
+    if (!weight || weight <= 0) { alert('请输入有效的儿童体重'); return; }
+    if (!selectedDrug) { alert('请先选择药物'); return; }
+    const result = document.getElementById('dosageResult');
+    result.classList.remove('hidden');
+    if (selectedDrug === 'acet') {
+        const doseMin = (weight * 10).toFixed(0);
+        const doseMax = (weight * 15).toFixed(0);
+        const volMin = (doseMin / 32).toFixed(1);
+        const volMax = (doseMax / 32).toFixed(1);
+        result.innerHTML = `
+            <div class="font-bold text-tealmed-800 text-sm flex items-center"><i class="fa-solid fa-check-circle mr-1"></i> 对乙酰氨基酚推荐剂量</div>
+            <div class="text-slate-700 text-[11px] space-y-1 pt-1">
+                <p>体重：${weight} kg</p>
+                <p>单次剂量范围：${doseMin} - ${doseMax} mg</p>
+                <p>混悬液(32mg/ml)用量：${volMin} - ${volMax} ml</p>
+                <p>给药间隔：每 4-6 小时一次</p>
+                <p>每日最大次数：不超过 5 次</p>
+                <p class="text-amber-700">每日最大剂量：${(weight * 15 * 5).toFixed(0)} mg（${(weight * 15 * 5 / 32).toFixed(1)} ml）</p>
+            </div>`;
+    } else {
+        const doseMin = (weight * 5).toFixed(0);
+        const doseMax = (weight * 10).toFixed(0);
+        const volMin = (doseMin / 20).toFixed(1);
+        const volMax = (doseMax / 20).toFixed(1);
+        result.innerHTML = `
+            <div class="font-bold text-tealmed-800 text-sm flex items-center"><i class="fa-solid fa-check-circle mr-1"></i> 布洛芬推荐剂量</div>
+            <div class="text-slate-700 text-[11px] space-y-1 pt-1">
+                <p>体重：${weight} kg</p>
+                <p>单次剂量范围：${doseMin} - ${doseMax} mg</p>
+                <p>混悬液(20mg/ml)用量：${volMin} - ${volMax} ml</p>
+                <p>给药间隔：每 6-8 小时一次</p>
+                <p>每日最大次数：不超过 4 次</p>
+                <p class="text-amber-700">每日最大剂量：${(weight * 10 * 4).toFixed(0)} mg（${(weight * 10 * 4 / 20).toFixed(1)} ml）</p>
+            </div>`;
+    }
+}
+
+// === MODAL CONTROLS ===
+function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+// === APP INIT ===
+window.onload = function() {
+    renderDiseases(diseaseDatabase);
+    renderOnlineEntry('');
+    renderMedications();
+    renderFirstAid();
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+.git/
+.github/
+.workbuddy-ai/
+node_modules/
+.wrangler/
+*.md
+wrangler.jsonc
+package.json
+package-lock.json
+deploy-tools/

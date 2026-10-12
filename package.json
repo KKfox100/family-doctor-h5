@@ -1,0 +1,13 @@
+{
+  "name": "family-doctor-h5",
+  "version": "1.0.0",
+  "private": true,
+  "description": "循证医学家庭医生助手 H5",
+  "devDependencies": {
+    "wrangler": "^4.146.0"
+  },
+  "optionalDependencies": {
+    "@cloudflare/workerd-windows-64": "^1.20261001.1",
+    "@esbuild/win32-x64": "^0.24.0"
+  }
+}

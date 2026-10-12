@@ -227,7 +227,7 @@
                     <i class="fa-solid fa-globe text-tealmed-400 text-lg"></i>
                     <h2 class="font-bold text-sm">在线查询权威医学来源</h2>
                 </div>
-                <p class="text-[11px] text-clinical-100 leading-relaxed">本地知识库未涵盖的医学问题，可在此输入中文关键词，一键跳转至国际权威医学知识库检索。默沙东与 UpToDate 均为中文站，PubMed / NHS / Mayo 为英文站（建议用英文病名）。</p>
+                <p class="text-[11px] text-clinical-100 leading-relaxed">本地知识库未涵盖的医学问题，可在此输入中文关键词，一键跳转至国际及国内权威医学知识库检索。默沙东、丁香医生、中华医学科普库、UpToDate 均为中文站；PubMed / NHS / Mayo 为英文站（建议用英文病名）。</p>
             </div>
 
             <!-- Search Input -->
@@ -267,11 +267,19 @@
 
             <!-- Source Grid -->
             <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                <h4 class="font-bold text-xs text-slate-800 flex items-center"><i class="fa-solid fa-bookmark text-clinical-600 mr-1.5"></i>选择权威来源查询</h4>
+                <h4 class="font-bold text-xs text-slate-800 flex items-center"><i class="fa-solid fa-bookmark text-clinical-600 mr-1.5"></i>选择来源查询（8 个权威医学来源）</h4>
                 <div class="grid grid-cols-2 gap-2 text-xs">
                     <button onclick="searchOnline('msd')" class="border border-clinical-200 bg-clinical-50/50 rounded-xl p-3 text-left hover:border-clinical-500 hover:shadow-sm transition active:scale-95 space-y-0.5">
                         <div class="flex items-center justify-between"><div class="flex items-center space-x-1.5"><i class="fa-solid fa-book-medical text-clinical-600"></i><span class="font-bold text-slate-800">默沙东诊疗手册</span></div><span class="text-[9px] bg-tealmed-100 text-tealmed-800 px-1.5 py-0.5 rounded font-bold shrink-0">中文站</span></div>
                         <p class="text-[9px] text-slate-500 leading-tight">本应用主要参考来源，覆盖全科疾病，支持中文直接检索</p>
+                    </button>
+                    <button onclick="searchOnline('dxy')" class="border border-clinical-200 bg-clinical-50/50 rounded-xl p-3 text-left hover:border-clinical-500 hover:shadow-sm transition active:scale-95 space-y-0.5">
+                        <div class="flex items-center justify-between"><div class="flex items-center space-x-1.5"><i class="fa-solid fa-comment-medical text-clinical-600"></i><span class="font-bold text-slate-800">丁香医生</span></div><span class="text-[9px] bg-tealmed-100 text-tealmed-800 px-1.5 py-0.5 rounded font-bold shrink-0">中文站</span></div>
+                        <p class="text-[9px] text-slate-500 leading-tight">丁香园旗下，三甲医生审核的疾病科普与问诊内容</p>
+                    </button>
+                    <button onclick="searchOnline('cma')" class="border border-clinical-200 bg-clinical-50/50 rounded-xl p-3 text-left hover:border-clinical-500 hover:shadow-sm transition active:scale-95 space-y-0.5">
+                        <div class="flex items-center justify-between"><div class="flex items-center space-x-1.5"><i class="fa-solid fa-graduation-cap text-clinical-600"></i><span class="font-bold text-slate-800">中华医学科普库</span></div><span class="text-[9px] bg-tealmed-100 text-tealmed-800 px-1.5 py-0.5 rounded font-bold shrink-0">中文站</span></div>
+                        <p class="text-[9px] text-slate-500 leading-tight">中华医学会主办，知名专家撰写的权威健康科普库</p>
                     </button>
                     <button onclick="searchOnline('uptodate')" class="border border-clinical-200 bg-clinical-50/50 rounded-xl p-3 text-left hover:border-clinical-500 hover:shadow-sm transition active:scale-95 space-y-0.5">
                         <div class="flex items-center justify-between"><div class="flex items-center space-x-1.5"><i class="fa-solid fa-database text-clinical-600"></i><span class="font-bold text-slate-800">UpToDate</span></div><span class="text-[9px] bg-tealmed-100 text-tealmed-800 px-1.5 py-0.5 rounded font-bold shrink-0">中文站</span></div>
@@ -569,7 +577,9 @@ function searchOnline(source) {
         uptodate: `https://www.uptodate.cn/contents/search?search=${encoded}`,
         pubmed: `https://pubmed.ncbi.nlm.nih.gov/?term=${encoded}`,
         nhs: `https://www.nhs.uk/search/?q=${encoded}`,
-        mayo: `https://www.mayoclinic.org/search/search-results?q=${encoded}`
+        mayo: `https://www.mayoclinic.org/search/search-results?q=${encoded}`,
+        dxy: `https://dxy.com/search?keyword=${encoded}`,
+        cma: `https://cmhadb.cma-cmc.com.cn/know/v/searchResult/20.html?q=${encoded}`
     };
     window.open(urls[source], '_blank');
 }
@@ -616,7 +626,7 @@ function renderOnlineEntry(query) {
                 <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-clinical-600 to-tealmed-600 text-white flex items-center justify-center shrink-0"><i class="fa-solid fa-globe"></i></div>
                 <div>
                     <h4 class="font-bold text-xs text-slate-800">没找到想查的？去在线查询</h4>
-                    <p class="text-[10px] text-slate-500 mt-0.5">${query ? '当前关键词「'+query+'」将自动带入 · ' : ''}默沙东/UpToDate/WHO/PubMed 等 6 大权威来源</p>
+                    <p class="text-[10px] text-slate-500 mt-0.5">${query ? '当前关键词「'+query+'」将自动带入 · ' : ''}默沙东/丁香医生/中华医学会等 8 大权威来源</p>
                 </div>
             </div>
             <i class="fa-solid fa-chevron-right text-slate-400 text-xs shrink-0"></i>

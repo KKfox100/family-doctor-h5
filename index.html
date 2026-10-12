@@ -227,7 +227,7 @@
                     <i class="fa-solid fa-globe text-tealmed-400 text-lg"></i>
                     <h2 class="font-bold text-sm">在线查询权威医学来源</h2>
                 </div>
-                <p class="text-[11px] text-clinical-100 leading-relaxed">本地知识库未涵盖的医学问题，可在此输入关键词，一键跳转至国际权威循证医学网站检索。所有来源均为国际认可的医学知识库，不含任何偏方内容。</p>
+                <p class="text-[11px] text-clinical-100 leading-relaxed">本地知识库未涵盖的医学问题，可在此输入中文关键词，一键跳转至国际权威医学知识库检索。默沙东与 UpToDate 均为中文站，PubMed / NHS / Mayo 为英文站（建议用英文病名）。</p>
             </div>
 
             <!-- Search Input -->
@@ -270,27 +270,27 @@
                 <h4 class="font-bold text-xs text-slate-800 flex items-center"><i class="fa-solid fa-bookmark text-clinical-600 mr-1.5"></i>选择权威来源查询</h4>
                 <div class="grid grid-cols-2 gap-2 text-xs">
                     <button onclick="searchOnline('msd')" class="border border-clinical-200 bg-clinical-50/50 rounded-xl p-3 text-left hover:border-clinical-500 hover:shadow-sm transition active:scale-95 space-y-0.5">
-                        <div class="flex items-center space-x-1.5"><i class="fa-solid fa-book-medical text-clinical-600"></i><span class="font-bold text-slate-800">默沙东诊疗手册</span></div>
-                        <p class="text-[9px] text-slate-500 leading-tight">MSD Manuals · 本应用主要参考来源，覆盖全科疾病</p>
+                        <div class="flex items-center justify-between"><div class="flex items-center space-x-1.5"><i class="fa-solid fa-book-medical text-clinical-600"></i><span class="font-bold text-slate-800">默沙东诊疗手册</span></div><span class="text-[9px] bg-tealmed-100 text-tealmed-800 px-1.5 py-0.5 rounded font-bold shrink-0">中文站</span></div>
+                        <p class="text-[9px] text-slate-500 leading-tight">本应用主要参考来源，覆盖全科疾病，支持中文直接检索</p>
                     </button>
-                    <button onclick="searchOnline('uptodate')" class="border border-slate-200 rounded-xl p-3 text-left hover:border-clinical-500 hover:shadow-sm transition active:scale-95 space-y-0.5">
-                        <div class="flex items-center space-x-1.5"><i class="fa-solid fa-database text-clinical-600"></i><span class="font-bold text-slate-800">UpToDate</span></div>
-                        <p class="text-[9px] text-slate-500 leading-tight">循证医学临床决策支持，专科深度内容</p>
+                    <button onclick="searchOnline('uptodate')" class="border border-clinical-200 bg-clinical-50/50 rounded-xl p-3 text-left hover:border-clinical-500 hover:shadow-sm transition active:scale-95 space-y-0.5">
+                        <div class="flex items-center justify-between"><div class="flex items-center space-x-1.5"><i class="fa-solid fa-database text-clinical-600"></i><span class="font-bold text-slate-800">UpToDate</span></div><span class="text-[9px] bg-tealmed-100 text-tealmed-800 px-1.5 py-0.5 rounded font-bold shrink-0">中文站</span></div>
+                        <p class="text-[9px] text-slate-500 leading-tight">循证医学临床决策支持，专科深度内容，中文检索</p>
                     </button>
                     <button onclick="searchOnline('who')" class="border border-slate-200 rounded-xl p-3 text-left hover:border-clinical-500 hover:shadow-sm transition active:scale-95 space-y-0.5">
-                        <div class="flex items-center space-x-1.5"><i class="fa-solid fa-earth-americas text-clinical-600"></i><span class="font-bold text-slate-800">WHO 世卫组织</span></div>
+                        <div class="flex items-center justify-between"><div class="flex items-center space-x-1.5"><i class="fa-solid fa-earth-americas text-clinical-600"></i><span class="font-bold text-slate-800">WHO 世卫组织</span></div><span class="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold shrink-0">中/英文</span></div>
                         <p class="text-[9px] text-slate-500 leading-tight">全球公共卫生标准、疫苗接种与流行病指南</p>
                     </button>
                     <button onclick="searchOnline('pubmed')" class="border border-slate-200 rounded-xl p-3 text-left hover:border-clinical-500 hover:shadow-sm transition active:scale-95 space-y-0.5">
-                        <div class="flex items-center space-x-1.5"><i class="fa-solid fa-flask text-clinical-600"></i><span class="font-bold text-slate-800">PubMed</span></div>
+                        <div class="flex items-center justify-between"><div class="flex items-center space-x-1.5"><i class="fa-solid fa-flask text-clinical-600"></i><span class="font-bold text-slate-800">PubMed</span></div><span class="text-[9px] bg-ambermed-100 text-ambermed-700 px-1.5 py-0.5 rounded font-bold shrink-0">英文检索</span></div>
                         <p class="text-[9px] text-slate-500 leading-tight">全球最大医学文献库，查最新研究证据</p>
                     </button>
                     <button onclick="searchOnline('nhs')" class="border border-slate-200 rounded-xl p-3 text-left hover:border-clinical-500 hover:shadow-sm transition active:scale-95 space-y-0.5">
-                        <div class="flex items-center space-x-1.5"><i class="fa-solid fa-hospital text-clinical-600"></i><span class="font-bold text-slate-800">NHS 英国国医</span></div>
+                        <div class="flex items-center justify-between"><div class="flex items-center space-x-1.5"><i class="fa-solid fa-hospital text-clinical-600"></i><span class="font-bold text-slate-800">NHS 英国国医</span></div><span class="text-[9px] bg-ambermed-100 text-ambermed-700 px-1.5 py-0.5 rounded font-bold shrink-0">英文检索</span></div>
                         <p class="text-[9px] text-slate-500 leading-tight">通俗版健康百科，适合患者阅读</p>
                     </button>
                     <button onclick="searchOnline('mayo')" class="border border-slate-200 rounded-xl p-3 text-left hover:border-clinical-500 hover:shadow-sm transition active:scale-95 space-y-0.5">
-                        <div class="flex items-center space-x-1.5"><i class="fa-solid fa-user-doctor text-clinical-600"></i><span class="font-bold text-slate-800">梅奥诊所 Mayo</span></div>
+                        <div class="flex items-center justify-between"><div class="flex items-center space-x-1.5"><i class="fa-solid fa-user-doctor text-clinical-600"></i><span class="font-bold text-slate-800">梅奥诊所 Mayo</span></div><span class="text-[9px] bg-ambermed-100 text-ambermed-700 px-1.5 py-0.5 rounded font-bold shrink-0">英文检索</span></div>
                         <p class="text-[9px] text-slate-500 leading-tight">梅奥诊所患者教育内容，疾病科普权威</p>
                     </button>
                 </div>
@@ -301,9 +301,10 @@
                 <p class="font-bold flex items-center text-xs"><i class="fa-solid fa-lightbulb text-amber-600 mr-1.5"></i>查询技巧</p>
                 <ul class="list-disc pl-4 space-y-0.5">
                     <li>用<strong>疾病通用名</strong>搜索（如"2型糖尿病"而非"消渴症"）</li>
-                    <li>不确定病名时，用<strong>核心症状</strong>搜索（如"咳血"、" 黄疸"）</li>
+                    <li>不确定病名时，用<strong>核心症状</strong>搜索（如"咳血"、"黄疸"）</li>
                     <li>查药用<strong>通用名</strong>（如"对乙酰氨基酚"而非商品名）</li>
                     <li>涉及化验单指标或英文术语时，PubMed 检索更准确</li>
+                    <li>英文站（PubMed / NHS / Mayo）建议换用英文病名检索，如 anemia、type 2 diabetes</li>
                 </ul>
                 <p class="text-amber-700 pt-1">在线查询结果为外部网页内容，仅供参考，不替代医生面诊。急症请直接拨打 120。</p>
             </div>
@@ -563,9 +564,9 @@ function searchOnline(source) {
     saveRecent(q);
     const encoded = encodeURIComponent(q);
     const urls = {
-        msd: `https://www.msdmanuals.com/home/search?q=${encoded}`,
-        who: `https://www.who.int/search/results?terms=${encoded}`,
-        uptodate: `https://www.uptodate.com/contents/search?search=${encoded}`,
+        msd: `https://www.msdmanuals.cn/home/searchresults?query=${encoded}`,
+        who: `https://www.who.int/home/search-results?terms=${encoded}`,
+        uptodate: `https://www.uptodate.cn/contents/search?search=${encoded}`,
         pubmed: `https://pubmed.ncbi.nlm.nih.gov/?term=${encoded}`,
         nhs: `https://www.nhs.uk/search/?q=${encoded}`,
         mayo: `https://www.mayoclinic.org/search/search-results?q=${encoded}`
